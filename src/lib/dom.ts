@@ -101,7 +101,17 @@ function isFragment(value: unknown): value is DocumentFragment {
 }
 
 function normalize(view: View): Node[] {
-  if (Array.isArray(view)) return view.flatMap((child) => normalize(child));
+  if (Array.isArray(view)) {
+    const nodes: Node[] = [];
+
+    for (let index = 0; index < view.length; index++) {
+      const childNodes = normalize(view[index]);
+      for (let nodeIndex = 0; nodeIndex < childNodes.length; nodeIndex++) nodes.push(childNodes[nodeIndex]);
+    }
+
+    return nodes;
+  }
+
   if (view === null || view === undefined || view === false) return [];
   if (isTemplateResult(view)) {
     const instance = instantiateTemplate(view);
@@ -117,6 +127,18 @@ function normalize(view: View): Node[] {
   return [document.createTextNode(String(view))];
 }
 
+function appendNodes(target: Node, nodes: Node[]): void {
+  for (let index = 0; index < nodes.length; index++) target.appendChild(nodes[index]);
+}
+
+function removeNodes(nodes: Node[]): void {
+  for (let index = 0; index < nodes.length; index++) nodes[index].parentNode?.removeChild(nodes[index]);
+}
+
+function pushNodes(target: Node[], nodes: Node[]): void {
+  for (let index = 0; index < nodes.length; index++) target.push(nodes[index]);
+}
+
 function instantiateRepeatBlock(view: View, key: string, item?: unknown, index = 0): RepeatBlock {
   const nodes = normalize(view);
   const instance = (nodes as InstantiatedNodes).__litcodeInstance;
@@ -129,14 +151,14 @@ function normalizeRepeat(result: RepeatResult): Node[] {
   for (let index = 0; index < result.items.length; index++) {
     const item = result.items[index];
     const block = instantiateRepeatBlock(result.render(item, index), String(result.key(item, index)), item, index);
-    for (let nodeIndex = 0; nodeIndex < block.nodes.length; nodeIndex++) nodes.push(block.nodes[nodeIndex]);
+    pushNodes(nodes, block.nodes);
   }
 
   return nodes;
 }
 
 function append(parent: Node, view: View) {
-  normalize(view).forEach((node) => parent.appendChild(node));
+  appendNodes(parent, normalize(view));
 }
 
 function makeFragment(view: View): DocumentFragment {
@@ -354,10 +376,6 @@ function createFragmentFromCache(cached: TemplateCacheEntry): DocumentFragment {
   return fragment;
 }
 
-function createFragmentFromTemplate(strings: TemplateStringsArray, values: unknown[]): DocumentFragment {
-  return createFragmentFromCache(getTemplateCacheEntry(strings, values));
-}
-
 function getTemplateParts(cached: TemplateCacheEntry, result: TemplateResult): StaticPart[] {
   if (cached.dynamicParts) return cached.dynamicParts;
 
@@ -462,13 +480,13 @@ function findChildPartBefore(nodes: Node[], fallbackParent: Node): ChildPart | u
 }
 
 function isPrimitiveChild(value: unknown): value is string | number | boolean | null | undefined {
-  return (
-    value === null ||
-    value === undefined ||
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean'
-  );
+  return value == null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+}
+
+function resetChildPart(part: ChildPart, nodes: Node[], instance?: TemplateInstance): void {
+  part.nodes = nodes;
+  part.instance = instance;
+  part.repeat = undefined;
 }
 
 function updatePrimitiveChildPart(part: ChildPart, value: string | number | boolean | null | undefined): boolean {
@@ -476,13 +494,8 @@ function updatePrimitiveChildPart(part: ChildPart, value: string | number | bool
   if (!parent) return true;
 
   if (value === null || value === undefined || value === false) {
-    for (let index = 0; index < part.nodes.length; index++) {
-      part.nodes[index].parentNode?.removeChild(part.nodes[index]);
-    }
-
-    part.nodes = [];
-    part.instance = undefined;
-    part.repeat = undefined;
+    removeNodes(part.nodes);
+    resetChildPart(part, []);
     return true;
   }
 
@@ -492,26 +505,18 @@ function updatePrimitiveChildPart(part: ChildPart, value: string | number | bool
   if (current?.nodeType === Node.TEXT_NODE) {
     if (current.textContent !== text) current.textContent = text;
 
-    for (let index = 1; index < part.nodes.length; index++) {
-      part.nodes[index].parentNode?.removeChild(part.nodes[index]);
-    }
+    if (part.nodes.length > 1) removeNodes(part.nodes.slice(1));
 
-    part.nodes = [current];
-    part.instance = undefined;
-    part.repeat = undefined;
+    resetChildPart(part, [current]);
     return true;
   }
 
   const next = document.createTextNode(text);
   parent.insertBefore(next, current ?? part.marker);
 
-  for (let index = 0; index < part.nodes.length; index++) {
-    part.nodes[index].parentNode?.removeChild(part.nodes[index]);
-  }
+  removeNodes(part.nodes);
 
-  part.nodes = [next];
-  part.instance = undefined;
-  part.repeat = undefined;
+  resetChildPart(part, [next]);
   return true;
 }
 
@@ -553,7 +558,7 @@ function updateRepeatChildPart(part: ChildPart, value: RepeatResult): void {
         current.index = index;
       } else {
         const nextNodes = normalize(rendered);
-        current.nodes = patchRepeatBlockNodes(parent, current.nodes, nextNodes, part.marker);
+        current.nodes = patchNodesBeforeMarker(parent, current.nodes, nextNodes, part.marker);
         current.instance = isTemplateResult(rendered)
           ? ((nextNodes as InstantiatedNodes).__litcodeInstance ?? current.instance)
           : undefined;
@@ -573,25 +578,17 @@ function updateRepeatChildPart(part: ChildPart, value: RepeatResult): void {
     const block = currentBlocks[index];
     if (retained.has(block)) continue;
 
-    for (let nodeIndex = 0; nodeIndex < block.nodes.length; nodeIndex++) {
-      block.nodes[nodeIndex].parentNode?.removeChild(block.nodes[nodeIndex]);
-    }
+    removeNodes(block.nodes);
   }
 
   moveRepeatBlocks(parent, nextBlocks, sources, part.marker);
 
-  const nodes: Node[] = [];
-  for (let index = 0; index < nextBlocks.length; index++) {
-    const blockNodes = nextBlocks[index].nodes;
-    for (let nodeIndex = 0; nodeIndex < blockNodes.length; nodeIndex++) nodes.push(blockNodes[nodeIndex]);
-  }
-
-  part.nodes = nodes;
+  part.nodes = collectRepeatNodes(nextBlocks);
   part.instance = undefined;
   part.repeat = { blocks: nextBlocks };
 }
 
-function patchRepeatBlockNodes(
+function patchNodesBeforeMarker(
   parent: Node,
   currentNodes: Node[],
   nextNodes: Node[],
@@ -621,6 +618,14 @@ function patchRepeatBlockNodes(
   return patchedNodes;
 }
 
+function collectRepeatNodes(blocks: RepeatBlock[]): Node[] {
+  const nodes: Node[] = [];
+
+  for (let index = 0; index < blocks.length; index++) pushNodes(nodes, blocks[index].nodes);
+
+  return nodes;
+}
+
 function moveRepeatBlocks(parent: Node, blocks: RepeatBlock[], sources: number[], marker: Comment): void {
   const stable = longestIncreasingSubsequence(sources);
 
@@ -628,8 +633,7 @@ function moveRepeatBlocks(parent: Node, blocks: RepeatBlock[], sources: number[]
     const fragment = document.createDocumentFragment();
 
     for (let index = 0; index < blocks.length; index++) {
-      const nodes = blocks[index].nodes;
-      for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) fragment.appendChild(nodes[nodeIndex]);
+      appendNodes(fragment, blocks[index].nodes);
     }
 
     parent.insertBefore(fragment, marker);
@@ -675,43 +679,11 @@ function updateChildPart(part: ChildPart, value: unknown): void {
   const parent = part.marker.parentNode;
   if (!parent) return;
 
-  part.nodes = patchChildPartNodes(parent, part.nodes, nodes, part.marker);
-  part.instance = isTemplateResult(value)
+  const instance = isTemplateResult(value)
     ? ((nodes as InstantiatedNodes).__litcodeInstance ?? findChildPartBefore(nodes, parent)?.instance)
     : undefined;
-  part.repeat = undefined;
-}
 
-function patchChildPartNodes(
-  parent: Node,
-  currentNodes: Node[],
-  nextNodes: Node[],
-  marker: Comment,
-): Node[] {
-  const patchedNodes: Node[] = [];
-  const length = Math.max(currentNodes.length, nextNodes.length);
-
-  for (let index = 0; index < length; index++) {
-    const current = currentNodes[index];
-    const next = nextNodes[index];
-
-    if (!current && next) {
-      parent.insertBefore(next, marker);
-      patchedNodes.push(next);
-      continue;
-    }
-
-    if (current && !next) {
-      current.parentNode?.removeChild(current);
-      continue;
-    }
-
-    if (current && next) {
-      patchedNodes.push(patchNode(current, next));
-    }
-  }
-
-  return patchedNodes;
+  resetChildPart(part, patchNodesBeforeMarker(parent, part.nodes, nodes, part.marker), instance);
 }
 
 function updateTemplateInstance(instance: TemplateInstance, next: TemplateResult): void {
@@ -794,13 +766,13 @@ function patchEvents(current: Element, next: Element): void {
   const currentEvents = currentElement.__litcodeEvents ?? {};
   const nextEvents = nextElement.__litcodeEvents ?? {};
 
-  Object.keys(currentEvents).forEach((name) => {
+  for (const name of Object.keys(currentEvents)) {
     if (!nextEvents[name]) removeEvent(current, name);
-  });
+  }
 
-  Object.entries(nextEvents).forEach(([name, handler]) => {
+  for (const [name, handler] of Object.entries(nextEvents)) {
     if (handler) setEvent(current, name, handler);
-  });
+  }
 }
 
 function patchInput(current: HTMLInputElement, next: HTMLInputElement): void {
@@ -959,6 +931,7 @@ function patchKeyedChildren(parent: Node, nextChildren: Node[]): void {
 function patchFullyKeyedChildren(parent: Node, nextChildren: Node[]): void {
   const currentChildren = Array.from(parent.childNodes);
   const keyedCurrent = new Map<string, Node>();
+  const currentIndexes = new Map<Node, number>();
   const sources = new Array<number>(nextChildren.length);
   const patchedChildren = new Array<Node>(nextChildren.length);
   let matched = 0;
@@ -967,6 +940,7 @@ function patchFullyKeyedChildren(parent: Node, nextChildren: Node[]): void {
     const child = currentChildren[index];
     const key = getNodeKey(child);
     if (key !== undefined && !keyedCurrent.has(key)) keyedCurrent.set(key, child);
+    currentIndexes.set(child, index);
   }
 
   for (let index = 0; index < nextChildren.length; index++) {
@@ -975,7 +949,7 @@ function patchFullyKeyedChildren(parent: Node, nextChildren: Node[]): void {
     const current = key === undefined ? undefined : keyedCurrent.get(key);
 
     if (current) {
-      sources[index] = currentChildren.indexOf(current);
+      sources[index] = currentIndexes.get(current) ?? -1;
       patchedChildren[index] = patchNode(current, next);
       matched++;
       continue;
