@@ -5,11 +5,15 @@ type Navigate = (path: string) => void;
 export function renderExamplesPage({ navigate }: { navigate: Navigate }): View {
   return html`
     <main class="grid min-h-screen place-items-center bg-slate-50 px-6 dark:bg-slate-950">
-      <section class="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-900">
-        <p class="mb-3 text-xs font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+      <section
+        class="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-900"
+      >
+        <p
+          class="mb-3 text-xs font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
+        >
           examples
         </p>
-        <h1 class="text-3xl font-black tracking-[-0.05em] text-slate-950 dark:text-slate-50">
+        <h1 class="text-3xl font-black tracking-tighter text-slate-950 dark:text-slate-50">
           Lazy-loaded examples page
         </h1>
         <p class="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-300">
