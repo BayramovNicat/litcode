@@ -17,12 +17,14 @@ import {
 import * as domHelpers from './dom-helpers';
 import * as domTemplateUtils from './dom-template-utils';
 import { updateChildPart } from './dom-child';
-import * as patch from './patch';
 import { $effect } from './runes';
 
 let templateCacheDocument: Document | undefined;
 
-export function getTemplateCacheEntry(strings: TemplateStringsArray, values: readonly unknown[]): TemplateCacheEntry {
+export function getTemplateCacheEntry(
+  strings: TemplateStringsArray,
+  values: readonly unknown[],
+): TemplateCacheEntry {
   if (templateCacheDocument !== document) {
     templateCache.clear();
     templateCacheDocument = document;
@@ -36,7 +38,9 @@ export function getTemplateCacheEntry(strings: TemplateStringsArray, values: rea
     template.innerHTML = cacheKey;
     cached = {
       template,
-      hasBooleanAttributes: booleanSelector ? !!template.content.querySelector(booleanSelector) : false,
+      hasBooleanAttributes: booleanSelector
+        ? !!template.content.querySelector(booleanSelector)
+        : false,
       hasKeys: !!template.content.querySelector(keySelector),
     };
     templateCache.set(cacheKey, cached);
@@ -71,12 +75,22 @@ export function instantiateTemplate(result: TemplateResult): TemplateInstance {
     }
 
     if (staticPart.kind === 'event') {
-      parts.push({ kind: 'event', index: staticPart.index, element: node as Element, name: staticPart.name });
+      parts.push({
+        kind: 'event',
+        index: staticPart.index,
+        element: node as Element,
+        name: staticPart.name,
+      });
       continue;
     }
 
     if (staticPart.kind === 'attribute') {
-      parts.push({ kind: 'attribute', index: staticPart.index, element: node as Element, name: staticPart.name });
+      parts.push({
+        kind: 'attribute',
+        index: staticPart.index,
+        element: node as Element,
+        name: staticPart.name,
+      });
       continue;
     }
 
@@ -175,7 +189,7 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
 
       if (eventPart.value === rawValue) continue;
 
-      eventPart.value = typeof rawValue === 'function' ? rawValue as EventListener : undefined;
+      eventPart.value = typeof rawValue === 'function' ? (rawValue as EventListener) : undefined;
       const element = eventPart.element as LitcodeElement;
       element.__litcodeEvents ??= {};
       element.__litcodeListeners ??= {};
@@ -184,7 +198,9 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
         element.__litcodeEvents[eventPart.name] = eventPart.value;
         if (!eventPart.listener) {
           eventPart.listener = (event) => {
-            const handler = (eventPart.element as LitcodeElement).__litcodeEvents?.[eventPart.name] ?? eventPart.value;
+            const handler =
+              (eventPart.element as LitcodeElement).__litcodeEvents?.[eventPart.name] ??
+              eventPart.value;
             handler?.(event);
           };
           element.__litcodeListeners[eventPart.name] = eventPart.listener;
@@ -250,14 +266,17 @@ function templateCacheKey(strings: TemplateStringsArray, values: readonly unknow
     if (index >= values.length) continue;
 
     const value = values[index];
-    const eventName = typeof value === 'function' ? domHelpers.eventNameFromAttribute(part) : undefined;
+    const eventName =
+      typeof value === 'function' ? domHelpers.eventNameFromAttribute(part) : undefined;
 
     if (eventName) {
       source += domHelpers.markerAttributeValue(part, `${markerPrefix}${index}`);
       continue;
     }
 
-    const attributeName = domHelpers.isInsideTag(source) ? domHelpers.attributeNameFromAttribute(part) : undefined;
+    const attributeName = domHelpers.isInsideTag(source)
+      ? domHelpers.attributeNameFromAttribute(part)
+      : undefined;
 
     if (attributeName) {
       source += domHelpers.markerAttributeValue(part, `${markerPrefix}${index}`);
@@ -299,12 +318,22 @@ function getTemplateParts(cached: TemplateCacheEntry, result: TemplateResult): S
 
   for (let index = 0; index < result.values.length; index++) {
     const previous = result.strings[index];
-    const eventName = typeof result.values[index] === 'function' ? domHelpers.eventNameFromAttribute(previous) : undefined;
-    const attributeName = domHelpers.isInsideTag(previous) ? domHelpers.attributeNameFromAttribute(previous) : undefined;
+    const eventName =
+      typeof result.values[index] === 'function'
+        ? domHelpers.eventNameFromAttribute(previous)
+        : undefined;
+    const attributeName = domHelpers.isInsideTag(previous)
+      ? domHelpers.attributeNameFromAttribute(previous)
+      : undefined;
 
     if (eventName) {
       root.querySelectorAll(`[on${eventName}="${markerPrefix}${index}"]`).forEach((element) => {
-        parts.push({ kind: 'event', index, path: domTemplateUtils.getNodePath(element, root), name: eventName });
+        parts.push({
+          kind: 'event',
+          index,
+          path: domTemplateUtils.getNodePath(element, root),
+          name: eventName,
+        });
       });
       continue;
     }
@@ -318,7 +347,12 @@ function getTemplateParts(cached: TemplateCacheEntry, result: TemplateResult): S
 
     if (attributeName) {
       root.querySelectorAll(`[${attributeName}="${markerPrefix}${index}"]`).forEach((element) => {
-        parts.push({ kind: 'attribute', index, path: domTemplateUtils.getNodePath(element, root), name: attributeName });
+        parts.push({
+          kind: 'attribute',
+          index,
+          path: domTemplateUtils.getNodePath(element, root),
+          name: attributeName,
+        });
       });
     }
   }
