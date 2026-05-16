@@ -10,20 +10,8 @@ const count = $state(0);
 const App = (): View => html`
   <div class="flex min-h-screen items-center justify-center bg-slate-50">
     ${Button({
-      id: 'test-btn',
-      className: 'rounded-lg bg-indigo-600 px-5 py-3 text-sm font-medium text-white shadow-sm',
-      type: 'button',
-      disabled: false,
-      title: 'Click me',
-      name: 'saveBtn',
-      value: 'save',
-      tabIndex: 0,
+      className: 'bg-red-500',
       onclick: () => count.value++,
-      dataset: {
-        id: '123',
-        state: 'active',
-      },
-      style: `z-index: ${count.value}`,
       children: `Count: ${count.value}`,
     })}
     <button
