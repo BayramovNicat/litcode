@@ -41,7 +41,6 @@ const log = $state<string[]>(['App mounted']);
 const copiedCode = $state('');
 
 const doubled = $derived(() => count.value * 2);
-const completedTodos = $derived(() => todos.value.filter((todo) => todo.done).length);
 const greeting = $derived(() => `Hello, ${name.value || 'friend'}!`);
 
 const statCard = tv({
@@ -399,40 +398,62 @@ function setTheme(next: 'light' | 'dark'): void {
 
 function Hero(): View {
   return html`
-    <section class="grid gap-8 py-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
-      <div>
-        <p class="text-sm font-black uppercase tracking-[0.28em] text-muted-foreground">
-          complete showcase
-        </p>
-        <h1 class="mt-4 text-5xl font-black tracking-[-0.065em] sm:text-7xl">
-          Every litcode feature on one page.
-        </h1>
-        <p class="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
-          Templates, reactive runes, derived values, effects, events, attributes, boolean props,
-          components, children, root prop forwarding, keyed repeat, variants, class merging, DOM
-          nodes, arrays, and mounting are all demonstrated below with copyable examples.
-        </p>
-        <div class="mt-8 flex flex-wrap gap-3">
-          ${Button({
-            size: 'lg',
-            onclick: () => (count.value += step.value),
-            children: 'Increment counter',
-          })}
-          ${Button({
-            variant: 'outline',
-            size: 'lg',
-            onclick: () => addLog('Hero action clicked'),
-            children: 'Write log',
-          })}
+    <section class="relative overflow-hidden rounded-[2rem] border bg-card p-6 shadow-xl shadow-slate-950/5 sm:p-8 lg:p-10">
+      <div class="absolute -right-24 -top-24 size-72 rounded-full bg-sky-400/15 blur-3xl"></div>
+      <div class="absolute -bottom-28 left-1/3 size-72 rounded-full bg-fuchsia-400/10 blur-3xl"></div>
+      <div class="relative grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+        <div>
+          <p class="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground">
+            welcome to litcode
+          </p>
+          <h1 class="mt-4 text-5xl font-black tracking-[-0.065em] sm:text-7xl">
+            Build tiny reactive interfaces with plain TypeScript.
+          </h1>
+          <p class="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
+            A lightweight UI runtime for tagged templates, components, reactive state, keyed lists,
+            and Tailwind-friendly variants. This page is a guided representation of how every piece
+            works in practice.
+          </p>
+          <div class="mt-8 flex flex-wrap gap-3">
+            ${Button({
+              size: 'lg',
+              onclick: () => document.querySelector('#demos')?.scrollIntoView({ behavior: 'smooth' }),
+              children: 'Explore demos',
+            })}
+            ${Button({
+              variant: 'outline',
+              size: 'lg',
+              onclick: () => setTheme(theme.value === 'light' ? 'dark' : 'light'),
+              children: `Switch to ${theme.value === 'light' ? 'dark' : 'light'}`,
+            })}
+          </div>
         </div>
-      </div>
-      <div class="grid gap-3">
-        ${StatCard({ label: 'count', value: count.value, tone: 'info' })}
-        ${StatCard({ label: 'doubled', value: doubled.value, tone: 'success' })}
-        ${StatCard({
-          label: 'todos complete',
-          value: `${completedTodos.value}/${todos.value.length}`,
-        })}
+        <div class="rounded-3xl border bg-background/80 p-4 shadow-2xl shadow-slate-950/10 backdrop-blur">
+          <div class="mb-4 flex items-center gap-2">
+            <span class="size-3 rounded-full bg-red-400"></span>
+            <span class="size-3 rounded-full bg-amber-400"></span>
+            <span class="size-3 rounded-full bg-emerald-400"></span>
+            <span class="ml-auto text-xs font-black uppercase tracking-[0.2em] text-muted-foreground"
+              >live preview</span
+            >
+          </div>
+          <div class="grid gap-3">
+            <div class="rounded-2xl bg-muted p-4">
+              <p class="text-sm text-muted-foreground">${greeting.value}</p>
+              <strong class="mt-1 block text-4xl font-black tracking-tight">${count.value}</strong>
+              <p class="text-sm text-muted-foreground">Doubled value: ${doubled.value}</p>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-3">
+              ${StatCard({ label: 'state', value: '$state' })}
+              ${StatCard({ label: 'views', value: 'html`' })}
+              ${StatCard({ label: 'lists', value: 'repeat' })}
+            </div>
+            <div class="flex flex-wrap gap-3">
+              ${Button({ onclick: () => (count.value += step.value), children: `Add ${step.value}` })}
+              ${Button({ variant: 'secondary', onclick: () => (count.value = 0), children: 'Reset' })}
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   `;
@@ -870,8 +891,11 @@ function HomePage(): View {
             >
           </div>
         </nav>
-        ${Hero()} ${ApiOverview()} ${TemplateDemo()} ${RunesDemo()} ${ComponentsDemo()}
-        ${RepeatDemo()} ${VariantsDemo()} ${MountDemo()}
+        ${Hero()}
+        <div id="demos" class="grid gap-8">
+          ${ApiOverview()} ${TemplateDemo()} ${RunesDemo()} ${ComponentsDemo()} ${RepeatDemo()}
+          ${VariantsDemo()} ${MountDemo()}
+        </div>
       </div>
     </main>
   `;
