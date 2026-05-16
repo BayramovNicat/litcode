@@ -5,6 +5,7 @@ import {
   type ChildPart,
   type AttributePart,
   type EventPart,
+  type LitcodeElement,
   type Part,
   type TemplateInstance,
   booleanAttributes,
@@ -169,12 +170,35 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
     }
 
     if (part.kind === 'event') {
-      if (part.cleanup) {
-        part.cleanup();
-        part.cleanup = undefined;
-      }
+      const eventPart = part as EventPart;
       part.source = undefined;
-      if (typeof rawValue === 'function') patch.setEvent(part.element, (part as EventPart).name, rawValue as EventListener);
+
+      if (eventPart.value === rawValue) continue;
+
+      eventPart.value = typeof rawValue === 'function' ? rawValue as EventListener : undefined;
+      const element = eventPart.element as LitcodeElement;
+      element.__litcodeEvents ??= {};
+      element.__litcodeListeners ??= {};
+
+      if (eventPart.value) {
+        element.__litcodeEvents[eventPart.name] = eventPart.value;
+        if (!eventPart.listener) {
+          eventPart.listener = (event) => {
+            const handler = (eventPart.element as LitcodeElement).__litcodeEvents?.[eventPart.name] ?? eventPart.value;
+            handler?.(event);
+          };
+          element.__litcodeListeners[eventPart.name] = eventPart.listener;
+          eventPart.element.addEventListener(eventPart.name, eventPart.listener);
+        }
+      } else if (eventPart.listener) {
+        delete element.__litcodeEvents[eventPart.name];
+        delete element.__litcodeListeners[eventPart.name];
+        eventPart.element.removeEventListener(eventPart.name, eventPart.listener);
+        eventPart.listener = undefined;
+      } else {
+        delete element.__litcodeEvents[eventPart.name];
+        delete element.__litcodeListeners[eventPart.name];
+      }
       continue;
     }
 
@@ -192,6 +216,11 @@ export function destroyTemplateInstance(instance: TemplateInstance): void {
     part.cleanup?.();
     part.cleanup = undefined;
     part.source = undefined;
+
+    if (part.kind === 'event') {
+      const eventPart = part as EventPart;
+      eventPart.value = undefined;
+    }
 
     if (part.kind === 'child') {
       const childPart = part as ChildPart;

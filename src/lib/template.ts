@@ -53,6 +53,8 @@ export type EventPart = {
   index: number;
   element: Element;
   name: string;
+  value?: EventListener;
+  listener?: EventListener;
   cleanup?: () => void;
   source?: unknown;
 };

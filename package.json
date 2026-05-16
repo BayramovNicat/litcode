@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "node --import tsx --test tests/**/*.test.ts",
     "bench": "tsx benchmarks/dom.bench.ts",
+    "bench:lit-html": "tsx benchmarks/lit-html.bench.ts",
     "bench:browser": "tsx benchmarks/run-browser-bench.ts",
     "format": "prettier . --write",
     "format:check": "prettier . --check"
@@ -19,6 +20,7 @@
     "@types/node": "^25.8.0",
     "clsx": "^2.1.1",
     "jsdom": "^29.1.1",
+    "lit-html": "^3.3.3",
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "tailwind-merge": "^3.6.0",
