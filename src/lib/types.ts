@@ -4,12 +4,12 @@ export type TemplateResult = {
   readonly values: unknown[];
 };
 
-export type RepeatResult<Item = unknown> = {
+export interface RepeatResult<Item = unknown> {
   readonly __litcodeRepeat: true;
   readonly items: readonly Item[];
-  readonly key: (item: Item, index: number) => string | number;
-  readonly render: (item: Item, index: number) => View;
-};
+  key(item: Item, index: number): string | number;
+  render(item: Item, index: number): View;
+}
 
 export type AnyNode = Node | TemplateResult | RepeatResult | string | number | boolean | null | undefined;
 
