@@ -109,5 +109,6 @@ export function findChildPartBefore(nodes: Node[], fallbackParent: Node): ChildP
 export function resetChildPart(part: ChildPart, nodes: Node[], instance?: any): void {
   part.nodes = nodes;
   part.instance = instance;
+  part.array = undefined;
   part.repeat = undefined;
 }

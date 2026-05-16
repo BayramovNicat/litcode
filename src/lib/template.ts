@@ -20,9 +20,14 @@ export type ChildPart = {
   marker: Comment;
   nodes: Node[];
   instance?: TemplateInstance;
+  array?: TemplateArrayState;
   repeat?: RepeatState;
   cleanup?: () => void;
   source?: unknown;
+};
+
+export type TemplateArrayState = {
+  instances: TemplateInstance[];
 };
 
 export type RepeatBlock = {

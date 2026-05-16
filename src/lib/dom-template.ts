@@ -225,6 +225,11 @@ export function destroyTemplateInstance(instance: TemplateInstance): void {
     if (part.kind === 'child') {
       const childPart = part as ChildPart;
       if (childPart.instance) destroyTemplateInstance(childPart.instance);
+      if (childPart.array) {
+        for (let arrayIndex = 0; arrayIndex < childPart.array.instances.length; arrayIndex++) {
+          destroyTemplateInstance(childPart.array.instances[arrayIndex]);
+        }
+      }
       if (childPart.repeat) {
         for (let b = 0; b < childPart.repeat.blocks.length; b++) {
           const block = childPart.repeat.blocks[b];
