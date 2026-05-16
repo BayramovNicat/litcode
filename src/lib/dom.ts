@@ -10,7 +10,9 @@ type EventBinding = {
 type TemplateValue = View | EventListener;
 
 type LitcodeElement = Element & {
-  __litcodeEvents?: Record<string, EventListener>;
+  __litcodeEvents?: Record<string, EventListener | undefined>;
+  __litcodeListeners?: Record<string, EventListener | undefined>;
+  __litcodeKey?: string;
 };
 
 const booleanAttributes = new Set(['disabled', 'checked', 'selected', 'readonly', 'required']);
@@ -59,6 +61,39 @@ function replaceComment(comment: Comment, view: View) {
   comment.replaceWith(...nodes);
 }
 
+function setEvent(element: Element, name: string, handler: EventListener): void {
+  const target = element as LitcodeElement;
+  target.__litcodeEvents ??= {};
+  target.__litcodeListeners ??= {};
+  target.__litcodeEvents[name] = handler;
+
+  if (target.__litcodeListeners[name]) return;
+
+  const listener: EventListener = (event) => {
+    target.__litcodeEvents?.[name]?.(event);
+  };
+
+  target.__litcodeListeners[name] = listener;
+  element.addEventListener(name, listener);
+}
+
+function removeEvent(element: Element, name: string): void {
+  const target = element as LitcodeElement;
+  const listener = target.__litcodeListeners?.[name];
+
+  if (listener) element.removeEventListener(name, listener);
+  if (target.__litcodeEvents) delete target.__litcodeEvents[name];
+  if (target.__litcodeListeners) delete target.__litcodeListeners[name];
+}
+
+function applyKeys(root: ParentNode): void {
+  root.querySelectorAll('[key]').forEach((element) => {
+    const target = element as LitcodeElement;
+    target.__litcodeKey = element.getAttribute('key') ?? undefined;
+    element.removeAttribute('key');
+  });
+}
+
 export function html(strings: TemplateStringsArray, ...values: TemplateValue[]): DocumentFragment {
   const eventBindings = new Map<string, EventBinding>();
   let source = '';
@@ -95,16 +130,19 @@ export function html(strings: TemplateStringsArray, ...values: TemplateValue[]):
   eventBindings.forEach((binding, id) => {
     const elements = fragment.querySelectorAll(`[on${binding.name}="${id}"]`);
     elements.forEach((element) => {
-      const target = element as LitcodeElement;
       element.removeAttribute(`on${binding.name}`);
-      target.__litcodeEvents ??= {};
-      target.__litcodeEvents[binding.name] = binding.handler;
-      element.addEventListener(binding.name, binding.handler);
+      setEvent(element, binding.name, binding.handler);
     });
   });
 
+  applyKeys(fragment);
+
   booleanAttributes.forEach((attribute) => {
     fragment.querySelectorAll(`[${attribute}=""]`).forEach((element) => {
+      if (attribute in element) {
+        (element as unknown as Record<string, boolean>)[attribute] = true;
+      }
+
       element.removeAttribute(attribute);
     });
   });
@@ -127,6 +165,14 @@ function sameNodeType(current: Node, next: Node): boolean {
   if (current.nodeType !== next.nodeType) return false;
 
   if (current instanceof Element && next instanceof Element) {
+    if (
+      current instanceof HTMLInputElement &&
+      next instanceof HTMLInputElement &&
+      current.type !== next.type
+    ) {
+      return false;
+    }
+
     return current.tagName === next.tagName;
   }
 
@@ -159,19 +205,13 @@ function patchEvents(current: Element, next: Element): void {
   const currentEvents = currentElement.__litcodeEvents ?? {};
   const nextEvents = nextElement.__litcodeEvents ?? {};
 
-  Object.entries(currentEvents).forEach(([name, handler]) => {
-    if (nextEvents[name] !== handler) {
-      current.removeEventListener(name, handler);
-    }
+  Object.keys(currentEvents).forEach((name) => {
+    if (!nextEvents[name]) removeEvent(current, name);
   });
 
   Object.entries(nextEvents).forEach(([name, handler]) => {
-    if (currentEvents[name] !== handler) {
-      current.addEventListener(name, handler);
-    }
+    if (handler) setEvent(current, name, handler);
   });
-
-  currentElement.__litcodeEvents = nextEvents;
 }
 
 function patchInput(current: HTMLInputElement, next: HTMLInputElement): void {
@@ -188,7 +228,8 @@ function patchOption(current: HTMLOptionElement, next: HTMLOptionElement): void 
 }
 
 function patchSelect(current: HTMLSelectElement, next: HTMLSelectElement): void {
-  if (current.value !== next.value) current.value = next.value;
+  const nextValue = next.getAttribute('value') ?? next.value;
+  if (current.value !== nextValue) current.value = nextValue;
   if (current.disabled !== next.disabled) current.disabled = next.disabled;
   if (current.required !== next.required) current.required = next.required;
 }
@@ -221,7 +262,15 @@ function patchFormProperties(current: Element, next: Element): void {
   }
 }
 
-function patchChildren(parent: Node, nextChildren: Node[]): void {
+function getNodeKey(node: Node): string | undefined {
+  return node instanceof Element ? (node as LitcodeElement).__litcodeKey : undefined;
+}
+
+function hasKeyedChildren(children: Node[]): boolean {
+  return children.some((child) => getNodeKey(child) !== undefined);
+}
+
+function patchChildrenByIndex(parent: Node, nextChildren: Node[]): void {
   const currentChildren = Array.from(parent.childNodes);
   const length = Math.max(currentChildren.length, nextChildren.length);
 
@@ -245,27 +294,83 @@ function patchChildren(parent: Node, nextChildren: Node[]): void {
   }
 }
 
-function patchElement(current: Element, next: Element): void {
-  patchAttributes(current, next);
-  patchEvents(current, next);
-  patchFormProperties(current, next);
-  patchChildren(current, Array.from(next.childNodes));
+function patchKeyedChildren(parent: Node, nextChildren: Node[]): void {
+  const currentChildren = Array.from(parent.childNodes);
+  const keyedCurrent = new Map<string, Node>();
+  const unkeyedCurrent = currentChildren.filter((child) => {
+    const key = getNodeKey(child);
+    if (key === undefined) return true;
+    if (!keyedCurrent.has(key)) keyedCurrent.set(key, child);
+    return false;
+  });
+  const usedCurrent = new Set<Node>();
+  let unkeyedIndex = 0;
+
+  nextChildren.forEach((next, index) => {
+    const key = getNodeKey(next);
+    let current: Node | undefined;
+
+    if (key !== undefined) {
+      current = keyedCurrent.get(key);
+    } else {
+      while (unkeyedIndex < unkeyedCurrent.length && usedCurrent.has(unkeyedCurrent[unkeyedIndex])) {
+        unkeyedIndex++;
+      }
+      current = unkeyedCurrent[unkeyedIndex++];
+    }
+
+    const reference = parent.childNodes[index] ?? null;
+
+    if (!current) {
+      parent.insertBefore(next, reference);
+      return;
+    }
+
+    usedCurrent.add(current);
+    const patched = patchNode(current, next);
+    if (patched !== reference) parent.insertBefore(patched, reference);
+  });
+
+  currentChildren.forEach((child) => {
+    if (!usedCurrent.has(child) && child.parentNode === parent) child.remove();
+  });
 }
 
-function patchNode(current: Node, next: Node): void {
+function patchChildren(parent: Node, nextChildren: Node[]): void {
+  const currentChildren = Array.from(parent.childNodes);
+
+  if (hasKeyedChildren(currentChildren) || hasKeyedChildren(nextChildren)) {
+    patchKeyedChildren(parent, nextChildren);
+    return;
+  }
+
+  patchChildrenByIndex(parent, nextChildren);
+}
+
+function patchElement(current: Element, next: Element): void {
+  (current as LitcodeElement).__litcodeKey = (next as LitcodeElement).__litcodeKey;
+  patchAttributes(current, next);
+  patchEvents(current, next);
+  patchChildren(current, Array.from(next.childNodes));
+  patchFormProperties(current, next);
+}
+
+function patchNode(current: Node, next: Node): Node {
   if (!sameNodeType(current, next)) {
     current.parentNode?.replaceChild(next, current);
-    return;
+    return next;
   }
 
   if (current.nodeType === Node.TEXT_NODE && next.nodeType === Node.TEXT_NODE) {
     patchText(current, next);
-    return;
+    return current;
   }
 
   if (current instanceof Element && next instanceof Element) {
     patchElement(current, next);
   }
+
+  return current;
 }
 
 export function render(view: View, target: ParentNode): MountHandle {
