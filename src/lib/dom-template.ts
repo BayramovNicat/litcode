@@ -1,0 +1,220 @@
+import { type TemplateResult } from './types';
+import {
+  type TemplateCacheEntry,
+  type StaticPart,
+  type ChildPart,
+  type AttributePart,
+  type EventPart,
+  type Part,
+  type TemplateInstance,
+  booleanAttributes,
+  templateCache,
+  booleanSelector,
+  keySelector,
+  markerPrefix,
+} from './template';
+import * as domHelpers from './dom-helpers';
+import * as domTemplateUtils from './dom-template-utils';
+import { updateChildPart } from './dom-child';
+import * as patch from './patch';
+
+let templateCacheDocument: Document | undefined;
+
+export function getTemplateCacheEntry(strings: TemplateStringsArray, values: readonly unknown[]): TemplateCacheEntry {
+  if (templateCacheDocument !== document) {
+    templateCache.clear();
+    templateCacheDocument = document;
+  }
+
+  const cacheKey = templateCacheKey(strings, values);
+  let cached = templateCache.get(cacheKey);
+
+  if (!cached) {
+    const template = document.createElement('template');
+    template.innerHTML = cacheKey;
+    cached = {
+      template,
+      hasBooleanAttributes: booleanSelector ? !!template.content.querySelector(booleanSelector) : false,
+      hasKeys: !!template.content.querySelector(keySelector),
+    };
+    templateCache.set(cacheKey, cached);
+  }
+
+  return cached;
+}
+
+export function instantiateTemplate(result: TemplateResult): TemplateInstance {
+  const cached = getTemplateCacheEntry(result.strings, result.values);
+  const fragment = domTemplateUtils.createFragmentFromCache(cached);
+  const nodes = Array.from(fragment.childNodes);
+  const parts: Part[] = [];
+  const staticParts = getTemplateParts(cached, result);
+
+  for (let index = 0; index < staticParts.length; index++) {
+    const staticPart = staticParts[index];
+    const node = domTemplateUtils.pathToNode(fragment, staticPart.path);
+    if (!node) continue;
+
+    if (staticPart.kind === 'child') {
+      const part: ChildPart = {
+        kind: 'child',
+        index: staticPart.index,
+        marker: node as Comment,
+        nodes: [],
+      };
+
+      (node as Comment & { __litcodePart?: ChildPart }).__litcodePart = part;
+      parts.push(part);
+      continue;
+    }
+
+    if (staticPart.kind === 'event') {
+      parts.push({ kind: 'event', index: staticPart.index, element: node as Element, name: staticPart.name });
+      continue;
+    }
+
+    if (staticPart.kind === 'attribute') {
+      parts.push({ kind: 'attribute', index: staticPart.index, element: node as Element, name: staticPart.name });
+      continue;
+    }
+
+    parts.push({ kind: 'key', index: staticPart.index, element: node as any });
+  }
+
+  const instance = { result, fragment, parts, nodes };
+  updateTemplateInstance(instance, result);
+  return instance;
+}
+
+export function updateTemplateInstance(instance: TemplateInstance, next: TemplateResult): void {
+  for (let index = 0; index < instance.parts.length; index++) {
+    const part = instance.parts[index];
+    const value = next.values[part.index];
+
+    if (part.kind === 'child') {
+      updateChildPart(part, value);
+      continue;
+    }
+
+    if (part.kind === 'attribute') {
+      if (!Object.is((part as AttributePart).value, value)) {
+        setAttributeValue(part.element, (part as AttributePart).name, value);
+        (part as AttributePart).value = value;
+      }
+      continue;
+    }
+
+    if (part.kind === 'event') {
+      if (typeof value === 'function') patch.setEvent(part.element, (part as EventPart).name, value as EventListener);
+      continue;
+    }
+
+    (part.element as any).__litcodeKey = String(value);
+    part.element.removeAttribute('key');
+  }
+
+  instance.result = next;
+}
+
+function templateCacheKey(strings: TemplateStringsArray, values: readonly unknown[]): string {
+  let source = '';
+
+  for (let index = 0; index < strings.length; index++) {
+    const part = strings[index];
+    source += part;
+    if (index >= values.length) continue;
+
+    const value = values[index];
+    const eventName = typeof value === 'function' ? domHelpers.eventNameFromAttribute(part) : undefined;
+
+    if (eventName) {
+      source += domHelpers.markerAttributeValue(part, `${markerPrefix}${index}`);
+      continue;
+    }
+
+    const attributeName = domHelpers.isInsideTag(source) ? domHelpers.attributeNameFromAttribute(part) : undefined;
+
+    if (attributeName) {
+      source += domHelpers.markerAttributeValue(part, `${markerPrefix}${index}`);
+      continue;
+    }
+
+    if (domHelpers.isInsideTag(source)) {
+      source += domHelpers.escapeAttribute(value);
+      continue;
+    }
+
+    source += `<!--${markerPrefix}${index}-->`;
+  }
+
+  return source.trim();
+}
+
+function getTemplateParts(cached: TemplateCacheEntry, result: TemplateResult): StaticPart[] {
+  if (cached.dynamicParts) return cached.dynamicParts;
+
+  const root = cached.template.content;
+  const parts: StaticPart[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
+  const comments: Comment[] = [];
+
+  while (walker.nextNode()) comments.push(walker.currentNode as Comment);
+
+  for (let commentIndex = 0; commentIndex < comments.length; commentIndex++) {
+    const comment = comments[commentIndex];
+    const data = comment.data.trim();
+    if (!data.startsWith(markerPrefix)) continue;
+
+    parts.push({
+      kind: 'child',
+      index: Number(data.slice(markerPrefix.length)),
+      path: domTemplateUtils.getNodePath(comment, root),
+    });
+  }
+
+  for (let index = 0; index < result.values.length; index++) {
+    const previous = result.strings[index];
+    const eventName = typeof result.values[index] === 'function' ? domHelpers.eventNameFromAttribute(previous) : undefined;
+    const attributeName = domHelpers.isInsideTag(previous) ? domHelpers.attributeNameFromAttribute(previous) : undefined;
+
+    if (eventName) {
+      root.querySelectorAll(`[on${eventName}="${markerPrefix}${index}"]`).forEach((element) => {
+        parts.push({ kind: 'event', index, path: domTemplateUtils.getNodePath(element, root), name: eventName });
+      });
+      continue;
+    }
+
+    if (attributeName === 'key') {
+      root.querySelectorAll(`[key="${markerPrefix}${index}"]`).forEach((element) => {
+        parts.push({ kind: 'key', index, path: domTemplateUtils.getNodePath(element, root) });
+      });
+      continue;
+    }
+
+    if (attributeName) {
+      root.querySelectorAll(`[${attributeName}="${markerPrefix}${index}"]`).forEach((element) => {
+        parts.push({ kind: 'attribute', index, path: domTemplateUtils.getNodePath(element, root), name: attributeName });
+      });
+    }
+  }
+
+  cached.dynamicParts = parts;
+  return parts;
+}
+
+function setAttributeValue(element: Element, name: string, value: unknown): void {
+  if (value === null || value === undefined || value === false) {
+    element.removeAttribute(name);
+    if (booleanAttributes.has(name) && name in element) {
+      (element as unknown as Record<string, boolean>)[name] = false;
+    }
+    return;
+  }
+
+  const attributeValue = value === true && booleanAttributes.has(name) ? '' : String(value);
+  element.setAttribute(name, attributeValue);
+
+  if (booleanAttributes.has(name) && name in element) {
+    (element as unknown as Record<string, boolean>)[name] = true;
+  }
+}

@@ -1,5 +1,11 @@
-import { toFragment } from './dom';
-import { specialPropKeys, type Children, type Component, type TemplateResult, type View } from './types';
+import { toFragment } from './dom-api';
+import {
+  specialPropKeys,
+  type Children,
+  type Component,
+  type TemplateResult,
+  type View,
+} from './types';
 
 const specialPropKeySet = new Set([...specialPropKeys, 'className']);
 
@@ -23,7 +29,8 @@ function firstElement(view: View): Element | null {
 
   if (!(view instanceof Node)) return null;
   if (view instanceof Element) return view;
-  if (view.nodeType === Node.DOCUMENT_FRAGMENT_NODE) return (view as DocumentFragment).firstElementChild;
+  if (view.nodeType === Node.DOCUMENT_FRAGMENT_NODE)
+    return (view as DocumentFragment).firstElementChild;
 
   return null;
 }
