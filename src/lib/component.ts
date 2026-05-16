@@ -1,6 +1,11 @@
-import { specialPropKeys, type Children, type Component, type View } from './types';
+import { toFragment } from './dom';
+import { specialPropKeys, type Children, type Component, type TemplateResult, type View } from './types';
 
 const specialPropKeySet = new Set([...specialPropKeys, 'className']);
+
+function isTemplateResult(view: View): view is TemplateResult {
+  return !!view && typeof view === 'object' && '__litcodeTemplate' in view;
+}
 
 function firstElement(view: View): Element | null {
   if (Array.isArray(view)) {
@@ -12,9 +17,13 @@ function firstElement(view: View): Element | null {
     return null;
   }
 
+  if (isTemplateResult(view)) {
+    return firstElement(toFragment(view));
+  }
+
   if (!(view instanceof Node)) return null;
   if (view instanceof Element) return view;
-  if (view instanceof DocumentFragment) return view.firstElementChild;
+  if (view.nodeType === Node.DOCUMENT_FRAGMENT_NODE) return (view as DocumentFragment).firstElementChild;
 
   return null;
 }
@@ -47,11 +56,12 @@ export function component<Props extends object>(render: (props: Props) => View):
   return ((props?: Props) => {
     const nextProps = (props ?? {}) as Props;
     const view = render(nextProps);
-    const element = firstElement(view);
+    const renderedView = isTemplateResult(view) ? toFragment(view) : view;
+    const element = firstElement(renderedView);
 
     if (element) applyProps(element, nextProps);
 
-    return view;
+    return renderedView;
   }) as Component<Props>;
 }
 

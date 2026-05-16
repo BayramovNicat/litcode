@@ -149,4 +149,32 @@ describe('dom patching', () => {
     const select = app.querySelector('select')!;
     assert.equal(select.value, 'c');
   });
+
+  it('supports dynamic attributes inside quoted attributes', () => {
+    const app = setupDom();
+    const handle = mount(html`<button class="${'first'}">Go</button>`, app);
+    const button = app.querySelector('button')!;
+
+    assert.equal(button.className, 'first');
+
+    handle.update(html`<button class="${'second'}">Go</button>`);
+
+    assert.equal(app.querySelector('button'), button);
+    assert.equal(button.className, 'second');
+  });
+
+  it('preserves focused component fragment inputs across root updates', () => {
+    const app = setupDom();
+    const Input = (value: string) => html`<input value=${value} />`;
+    const view = (value: string) => html`<div>${Input(value)}</div>`;
+    const handle = mount(view('a'), app);
+    const input = app.querySelector('input')!;
+
+    input.focus();
+    handle.update(view('ab'));
+
+    assert.equal(app.querySelector('input'), input);
+    assert.equal(document.activeElement, input);
+    assert.equal(input.value, 'ab');
+  });
 });

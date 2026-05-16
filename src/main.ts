@@ -8,12 +8,12 @@ if (!app) throw new Error('App root not found.');
 
 const count = $state(0);
 const App = (): View => html`
-  ${Input({
-    type: 'number',
-    value: String(count.value),
-    oninput: (e) => (count.value = parseInt((e.target as HTMLInputElement).value)),
-  })}
   <div class="flex min-h-screen items-center justify-center bg-slate-50">
+    ${Input({
+      type: 'number',
+      value: String(count.value),
+      oninput: (e) => (count.value = parseInt((e.target as HTMLInputElement).value)),
+    })}
     ${Button({
       className: 'bg-red-500 hover:bg-red-600',
       onclick: () => count.value++,
@@ -31,5 +31,6 @@ const App = (): View => html`
 const handle = mount(App(), app);
 
 $effect(() => {
+  count.value;
   handle.update(App());
 });

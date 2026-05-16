@@ -1,10 +1,51 @@
-import type { MountHandle, View } from './types';
+import type { MountHandle, TemplateResult, View } from './types';
 
 const markerPrefix = 'litcode-part-';
 
-type EventBinding = {
+type TemplateCacheEntry = {
+  template: HTMLTemplateElement;
+};
+
+type ChildPart = {
+  kind: 'child';
+  index: number;
+  marker: Comment;
+  nodes: Node[];
+  instance?: TemplateInstance;
+};
+
+type AttributePart = {
+  kind: 'attribute';
+  index: number;
+  element: Element;
   name: string;
-  handler: EventListener;
+  value?: unknown;
+};
+
+type EventPart = {
+  kind: 'event';
+  index: number;
+  element: Element;
+  name: string;
+};
+
+type KeyPart = {
+  kind: 'key';
+  index: number;
+  element: LitcodeElement;
+};
+
+type Part = ChildPart | AttributePart | EventPart | KeyPart;
+
+type TemplateInstance = {
+  result: TemplateResult;
+  fragment: DocumentFragment;
+  parts: Part[];
+  nodes: Node[];
+};
+
+type InstantiatedNodes = Node[] & {
+  __litcodeInstance?: TemplateInstance;
 };
 
 type TemplateValue = View | EventListener;
@@ -16,14 +57,34 @@ type LitcodeElement = Element & {
 };
 
 const booleanAttributes = new Set(['disabled', 'checked', 'selected', 'readonly', 'required']);
+const templateCache = new Map<string, TemplateCacheEntry>();
+const booleanSelector = Array.from(booleanAttributes, (attribute) => `[${attribute}=""]`).join(',');
+let templateCacheDocument: Document | undefined;
 
 function isNode(value: unknown): value is Node {
   return typeof Node !== 'undefined' && value instanceof Node;
 }
 
+function isTemplateResult(value: unknown): value is TemplateResult {
+  return !!value && typeof value === 'object' && (value as TemplateResult).__litcodeTemplate === true;
+}
+
+function isFragment(value: unknown): value is DocumentFragment {
+  return isNode(value) && value.nodeType === Node.DOCUMENT_FRAGMENT_NODE;
+}
+
 function normalize(view: View): Node[] {
   if (Array.isArray(view)) return view.flatMap((child) => normalize(child));
   if (view === null || view === undefined || view === false) return [];
+  if (isTemplateResult(view)) {
+    const instance = instantiateTemplate(view);
+    const nodes = instance.nodes as InstantiatedNodes;
+    nodes.__litcodeInstance = instance;
+    return nodes;
+  }
+  if (isFragment(view)) {
+    return Array.from(view.childNodes);
+  }
   if (isNode(view)) return [view];
   return [document.createTextNode(String(view))];
 }
@@ -38,9 +99,22 @@ function makeFragment(view: View): DocumentFragment {
   return fragment;
 }
 
+export function toFragment(view: View): DocumentFragment {
+  return makeFragment(view);
+}
+
 function eventNameFromAttribute(source: string): string | undefined {
-  const match = source.match(/\s(on[a-z][\w-]*)\s*=\s*$/i);
+  const match = source.match(/\s(on[a-z][\w-]*)\s*=\s*["']?$/i);
   return match?.[1]?.slice(2).toLowerCase();
+}
+
+function attributeNameFromAttribute(source: string): string | undefined {
+  const match = source.match(/\s([:@a-zA-Z_][\w:.-]*)\s*=\s*["']?$/);
+  return match?.[1];
+}
+
+function markerAttributeValue(source: string, id: string): string {
+  return /["']$/.test(source.trimEnd()) ? id : `"${id}"`;
 }
 
 function isInsideTag(source: string): boolean {
@@ -54,11 +128,6 @@ function escapeAttribute(value: unknown): string {
     .replaceAll('"', '&quot;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;');
-}
-
-function replaceComment(comment: Comment, view: View) {
-  const nodes = normalize(view);
-  comment.replaceWith(...nodes);
 }
 
 function setEvent(element: Element, name: string, handler: EventListener): void {
@@ -88,14 +157,45 @@ function removeEvent(element: Element, name: string): void {
 
 function applyKeys(root: ParentNode): void {
   root.querySelectorAll('[key]').forEach((element) => {
+    const key = element.getAttribute('key') ?? undefined;
+
     const target = element as LitcodeElement;
-    target.__litcodeKey = element.getAttribute('key') ?? undefined;
+    target.__litcodeKey = key;
     element.removeAttribute('key');
   });
 }
 
-export function html(strings: TemplateStringsArray, ...values: TemplateValue[]): DocumentFragment {
-  const eventBindings = new Map<string, EventBinding>();
+function setAttributeValue(element: Element, name: string, value: unknown): void {
+  if (value === null || value === undefined || value === false) {
+    element.removeAttribute(name);
+    if (booleanAttributes.has(name) && name in element) {
+      (element as unknown as Record<string, boolean>)[name] = false;
+    }
+    return;
+  }
+
+  const attributeValue = value === true && booleanAttributes.has(name) ? '' : String(value);
+  element.setAttribute(name, attributeValue);
+
+  if (booleanAttributes.has(name) && name in element) {
+    (element as unknown as Record<string, boolean>)[name] = true;
+  }
+}
+
+export function html(strings: TemplateStringsArray, ...values: TemplateValue[]): TemplateResult {
+  return {
+    __litcodeTemplate: true,
+    strings,
+    values,
+  };
+}
+
+function createFragmentFromTemplate(strings: TemplateStringsArray, values: unknown[]): DocumentFragment {
+  if (templateCacheDocument !== document) {
+    templateCache.clear();
+    templateCacheDocument = document;
+  }
+
   let source = '';
 
   strings.forEach((part, index) => {
@@ -107,11 +207,21 @@ export function html(strings: TemplateStringsArray, ...values: TemplateValue[]):
 
     if (eventName) {
       const id = `${markerPrefix}${index}`;
-      source += `"${id}"`;
-      eventBindings.set(id, {
-        name: eventName,
-        handler: value as EventListener,
-      });
+      source += markerAttributeValue(part, id);
+      return;
+    }
+
+    const attributeName = isInsideTag(source) ? attributeNameFromAttribute(part) : undefined;
+
+    if (attributeName === 'key') {
+      const id = `${markerPrefix}${index}`;
+      source += markerAttributeValue(part, id);
+      return;
+    }
+
+    if (attributeName) {
+      const id = `${markerPrefix}${index}`;
+      source += markerAttributeValue(part, id);
       return;
     }
 
@@ -123,22 +233,24 @@ export function html(strings: TemplateStringsArray, ...values: TemplateValue[]):
     source += `<!--${markerPrefix}${index}-->`;
   });
 
-  const template = document.createElement('template');
-  template.innerHTML = source.trim();
-  const fragment = template.content.cloneNode(true) as DocumentFragment;
+  const cacheKey = source.trim();
+  let cached = templateCache.get(cacheKey);
 
-  eventBindings.forEach((binding, id) => {
-    const elements = fragment.querySelectorAll(`[on${binding.name}="${id}"]`);
-    elements.forEach((element) => {
-      element.removeAttribute(`on${binding.name}`);
-      setEvent(element, binding.name, binding.handler);
-    });
-  });
+  if (!cached) {
+    const template = document.createElement('template');
+    template.innerHTML = cacheKey;
+    cached = {
+      template,
+    };
+    templateCache.set(cacheKey, cached);
+  }
 
-  applyKeys(fragment);
+  const fragment = cached.template.content.cloneNode(true) as DocumentFragment;
 
-  booleanAttributes.forEach((attribute) => {
-    fragment.querySelectorAll(`[${attribute}=""]`).forEach((element) => {
+  fragment.querySelectorAll(booleanSelector).forEach((element) => {
+    booleanAttributes.forEach((attribute) => {
+      if (element.getAttribute(attribute) !== '') return;
+
       if (attribute in element) {
         (element as unknown as Record<string, boolean>)[attribute] = true;
       }
@@ -147,18 +259,145 @@ export function html(strings: TemplateStringsArray, ...values: TemplateValue[]):
     });
   });
 
+  applyKeys(fragment);
+
+  return fragment;
+}
+
+function instantiateTemplate(result: TemplateResult): TemplateInstance {
+  const fragment = createFragmentFromTemplate(result.strings, result.values);
+  const nodes = Array.from(fragment.childNodes);
+  const parts: Part[] = [];
   const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_COMMENT);
   const comments: Comment[] = [];
+
   while (walker.nextNode()) comments.push(walker.currentNode as Comment);
 
   comments.forEach((comment) => {
     const data = comment.data.trim();
     if (!data.startsWith(markerPrefix)) return;
+
     const index = Number(data.slice(markerPrefix.length));
-    replaceComment(comment, values[index] as View);
+    const part: ChildPart = { kind: 'child', index, marker: comment, nodes: [] };
+    (comment as Comment & { __litcodePart?: ChildPart }).__litcodePart = part;
+    parts.push(part);
   });
 
-  return fragment;
+  result.values.forEach((value, index) => {
+    const previous = result.strings[index];
+    const eventName = typeof value === 'function' ? eventNameFromAttribute(previous) : undefined;
+    const attributeName = isInsideTag(previous) ? attributeNameFromAttribute(previous) : undefined;
+
+    if (eventName) {
+      fragment.querySelectorAll(`[on${eventName}="${markerPrefix}${index}"]`).forEach((element) => {
+        parts.push({ kind: 'event', index, element, name: eventName });
+      });
+      return;
+    }
+
+    if (attributeName === 'key') {
+      fragment.querySelectorAll(`[key="${markerPrefix}${index}"]`).forEach((element) => {
+        parts.push({ kind: 'key', index, element: element as LitcodeElement });
+      });
+      return;
+    }
+
+    if (attributeName) {
+      fragment.querySelectorAll(`[${attributeName}="${markerPrefix}${index}"]`).forEach((element) => {
+        parts.push({ kind: 'attribute', index, element, name: attributeName });
+      });
+    }
+  });
+
+  const instance = { result, fragment, parts, nodes };
+  updateTemplateInstance(instance, result);
+  return instance;
+}
+
+function findChildPartBefore(nodes: Node[], fallbackParent: Node): ChildPart | undefined {
+  const first = nodes[0];
+  const previous = first ? first.previousSibling : fallbackParent.lastChild;
+  return previous instanceof Comment && (previous as Comment & { __litcodePart?: ChildPart }).__litcodePart
+    ? (previous as Comment & { __litcodePart?: ChildPart }).__litcodePart
+    : undefined;
+}
+
+function updateChildPart(part: ChildPart, value: unknown): void {
+  if (part.instance && isTemplateResult(value) && part.instance.result.strings === value.strings) {
+    updateTemplateInstance(part.instance, value);
+    part.nodes = part.instance.nodes;
+    return;
+  }
+
+  const nodes = normalize(value as View);
+  const parent = part.marker.parentNode;
+  if (!parent) return;
+
+  part.nodes = patchChildPartNodes(parent, part.nodes, nodes, part.marker);
+  part.instance = isTemplateResult(value)
+    ? ((nodes as InstantiatedNodes).__litcodeInstance ?? findChildPartBefore(nodes, parent)?.instance)
+    : undefined;
+}
+
+function patchChildPartNodes(
+  parent: Node,
+  currentNodes: Node[],
+  nextNodes: Node[],
+  marker: Comment,
+): Node[] {
+  const patchedNodes: Node[] = [];
+  const length = Math.max(currentNodes.length, nextNodes.length);
+
+  for (let index = 0; index < length; index++) {
+    const current = currentNodes[index];
+    const next = nextNodes[index];
+
+    if (!current && next) {
+      parent.insertBefore(next, marker);
+      patchedNodes.push(next);
+      continue;
+    }
+
+    if (current && !next) {
+      current.parentNode?.removeChild(current);
+      continue;
+    }
+
+    if (current && next) {
+      patchedNodes.push(patchNode(current, next));
+    }
+  }
+
+  return patchedNodes;
+}
+
+function updateTemplateInstance(instance: TemplateInstance, next: TemplateResult): void {
+  instance.parts.forEach((part) => {
+    const value = next.values[part.index];
+
+    if (part.kind === 'child') {
+      updateChildPart(part, value);
+      return;
+    }
+
+    if (part.kind === 'attribute') {
+      if (!Object.is(part.value, value)) {
+        setAttributeValue(part.element, part.name, value);
+        part.value = value;
+      }
+      return;
+    }
+
+    if (part.kind === 'event') {
+      if (typeof value === 'function') setEvent(part.element, part.name, value as EventListener);
+      return;
+    }
+
+    part.element.__litcodeKey = String(value);
+    part.element.removeAttribute('key');
+  });
+
+  instance.result = next;
 }
 
 function sameNodeType(current: Node, next: Node): boolean {
@@ -375,14 +614,33 @@ function patchNode(current: Node, next: Node): Node {
 
 export function render(view: View, target: ParentNode): MountHandle {
   const parent = target as unknown as HTMLElement;
-  parent.replaceChildren(makeFragment(view));
+  let rootInstance = isTemplateResult(view) ? instantiateTemplate(view) : undefined;
+  parent.replaceChildren(rootInstance ? rootInstance.fragment : makeFragment(view));
 
   return {
     update(next) {
+      if (
+        rootInstance &&
+        isTemplateResult(next) &&
+        rootInstance.result.strings === next.strings
+      ) {
+        updateTemplateInstance(rootInstance, next);
+        return;
+      }
+
+      if (isTemplateResult(next)) {
+        const nextInstance = instantiateTemplate(next);
+        patchChildren(parent, nextInstance.nodes);
+        rootInstance = nextInstance;
+        return;
+      }
+
       patchChildren(parent, Array.from(makeFragment(next).childNodes));
+      rootInstance = undefined;
     },
     destroy() {
       parent.replaceChildren();
+      rootInstance = undefined;
     },
   };
 }

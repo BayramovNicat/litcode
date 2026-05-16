@@ -1,4 +1,10 @@
-export type AnyNode = Node | string | number | boolean | null | undefined;
+export type TemplateResult = {
+  readonly __litcodeTemplate: true;
+  readonly strings: TemplateStringsArray;
+  readonly values: unknown[];
+};
+
+export type AnyNode = Node | TemplateResult | string | number | boolean | null | undefined;
 
 export type View = AnyNode | View[];
 
