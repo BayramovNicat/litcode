@@ -1,3 +1,5 @@
 import { startGame } from './game/App';
 
-startGame(document.querySelector<HTMLDivElement>('#app')!);
+export function startPokemonGame(target: HTMLElement): void {
+  startGame(target);
+}
