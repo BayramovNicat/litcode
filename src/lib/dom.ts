@@ -9,6 +9,8 @@ type EventBinding = {
 
 type TemplateValue = View | EventListener;
 
+const booleanAttributes = new Set(['disabled', 'checked', 'selected', 'readonly', 'required']);
+
 function isNode(value: unknown): value is Node {
   return typeof Node !== 'undefined' && value instanceof Node;
 }
@@ -33,6 +35,19 @@ function makeFragment(view: View): DocumentFragment {
 function eventNameFromAttribute(source: string): string | undefined {
   const match = source.match(/\s(on[a-z][\w-]*)\s*=\s*$/i);
   return match?.[1]?.slice(2).toLowerCase();
+}
+
+function isInsideTag(source: string): boolean {
+  return source.lastIndexOf('<') > source.lastIndexOf('>');
+}
+
+function escapeAttribute(value: unknown): string {
+  if (value === null || value === undefined || value === false) return '';
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
 }
 
 function replaceComment(comment: Comment, view: View) {
@@ -61,6 +76,11 @@ export function html(strings: TemplateStringsArray, ...values: TemplateValue[]):
       return;
     }
 
+    if (isInsideTag(source)) {
+      source += escapeAttribute(value);
+      return;
+    }
+
     source += `<!--${markerPrefix}${index}-->`;
   });
 
@@ -73,6 +93,12 @@ export function html(strings: TemplateStringsArray, ...values: TemplateValue[]):
     elements.forEach((element) => {
       element.removeAttribute(`on${binding.name}`);
       element.addEventListener(binding.name, binding.handler);
+    });
+  });
+
+  booleanAttributes.forEach((attribute) => {
+    fragment.querySelectorAll(`[${attribute}=""]`).forEach((element) => {
+      element.removeAttribute(attribute);
     });
   });
 
