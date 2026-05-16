@@ -50,7 +50,7 @@ const LoadingView = component(
           <h1 class="mb-4 text-3xl font-black tracking-[-0.04em] text-slate-950 dark:text-white">
             Kanto Runes
           </h1>
-          ${Spinner({})}
+          ${Spinner()}
         `,
       })}
     </main>
@@ -75,11 +75,11 @@ const GameView = component(
   () => html`
     <main class="min-h-screen bg-slate-50 px-4 py-6 dark:bg-slate-950 sm:px-6 lg:px-8">
       <div class="mx-auto grid max-w-7xl gap-6">
-        ${Header({})} ${hasStarter.value ? null : StarterPicker({})}
+        ${Header()} ${hasStarter.value ? null : StarterPicker()}
         <div class="grid gap-6 lg:grid-cols-[380px_1fr]">
-          <aside class="grid content-start gap-6">${PlayerPanel({})} ${InventoryList({})}</aside>
+          <aside class="grid content-start gap-6">${PlayerPanel()} ${InventoryList()}</aside>
           <section class="grid content-start gap-6">
-            ${LocationPanel({})} ${BattlePanel({})} ${BattleLog({})}
+            ${LocationPanel()} ${BattlePanel()} ${BattleLog()}
           </section>
         </div>
       </div>
@@ -88,19 +88,19 @@ const GameView = component(
 );
 
 const Root = component(() => {
-  if (loading.value) return LoadingView({});
-  if (error.value) return ErrorView({});
-  return GameView({});
+  if (loading.value) return LoadingView();
+  if (error.value) return ErrorView();
+  return GameView();
 });
 
 export function startGame(target: HTMLElement): void {
   loadSavedGame();
   loadPokemon();
 
-  const handle = mount(Root({}), target);
+  const handle = mount(Root(), target);
 
   $effect(() => {
-    handle.update(Root({}));
+    handle.update(Root());
   });
 
   $effect(() => {
