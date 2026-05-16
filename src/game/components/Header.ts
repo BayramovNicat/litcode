@@ -10,9 +10,7 @@ export const Header = component(
           ${Badge({ label: 'PokéAPI Gen 1', tone: 'red' })}
           ${Badge({ label: `${caughtCount.value} caught`, tone: 'green' })}
         </div>
-        <h1
-          class="text-4xl font-black tracking-[-0.05em] text-slate-950 sm:text-6xl dark:text-white"
-        >
+        <h1 class="text-4xl font-black tracking-tighter text-slate-950 sm:text-6xl dark:text-white">
           Kanto Runes
         </h1>
         <p class="mt-2 max-w-2xl text-slate-600 dark:text-slate-300">
