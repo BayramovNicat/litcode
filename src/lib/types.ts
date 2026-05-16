@@ -11,8 +11,10 @@ export type Component<Props extends object = {}> =
 
 export type InferProps<T> = T extends Component<infer Props> ? Props : never;
 
-export type Props<P extends object = {}> = Omit<P, 'children'> & {
+export type Props<P extends object = {}> = Omit<P, 'children' | 'dataset' | 'style'> & {
   children?: View | View[];
+  dataset?: Partial<DOMStringMap>;
+  style?: string;
 };
 
 export type Children = View;

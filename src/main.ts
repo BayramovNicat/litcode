@@ -19,6 +19,11 @@ const App = (): View => html`
       value: 'save',
       tabIndex: 0,
       onclick: () => count.value++,
+      dataset: {
+        id: '123',
+        state: 'active',
+      },
+      style: `z-index: ${count.value}`,
       children: `Count: ${count.value}`,
     })}
     <button
