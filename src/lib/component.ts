@@ -1,6 +1,6 @@
-import type { Children, Component, View } from './types';
+import { specialPropKeys, type Children, type Component, type View } from './types';
 
-const specialPropKeys = new Set(['children', 'dataset', 'style', 'className']);
+const specialPropKeySet = new Set([...specialPropKeys, 'className']);
 
 function firstElement(view: View): Element | null {
   if (Array.isArray(view)) {
@@ -31,7 +31,7 @@ function applyProps(element: Element, props: object): void {
   };
 
   for (const [key, value] of Object.entries(props)) {
-    if (specialPropKeys.has(key)) continue;
+    if (specialPropKeySet.has(key)) continue;
     if (!(key in target)) continue;
 
     target[key] = value;
