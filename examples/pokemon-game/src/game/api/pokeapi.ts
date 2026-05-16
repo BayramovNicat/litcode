@@ -1,4 +1,4 @@
-import type { Pokemon } from '@/game/types';
+import type { Pokemon } from '../types';
 
 type CachedPokemonResponse = Pokemon[];
 

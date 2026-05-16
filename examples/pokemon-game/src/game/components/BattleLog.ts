@@ -1,6 +1,6 @@
-import { Card } from '@/components';
 import { component, html } from '@/lib';
-import { battleLog } from '@/game/state';
+import { Card } from '../../components/Card';
+import { battleLog } from '../state';
 
 export const BattleLog = component(() =>
   Card({

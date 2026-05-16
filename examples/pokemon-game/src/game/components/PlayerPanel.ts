@@ -1,8 +1,12 @@
-import { Badge, Button, Card, EmptyState, Input } from '@/components';
 import { component, html } from '@/lib';
-import { switchActivePokemon, updateTrainerName } from '@/game/actions';
-import { party, trainerName, wildPokemon } from '@/game/state';
-import { PokemonCard } from '@/game/components/PokemonCard';
+import { switchActivePokemon, updateTrainerName } from '../actions';
+import { party, trainerName, wildPokemon } from '../state';
+import { PokemonCard } from './PokemonCard';
+import { Badge } from '../../components/Badge';
+import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
+import { EmptyState } from '../../components/EmptyState';
+import { Input } from '../../components/Input';
 
 export const PlayerPanel = component(() =>
   Card({

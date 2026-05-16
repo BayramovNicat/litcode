@@ -1,10 +1,11 @@
-import { Button, Card } from '@/components';
 import { component, html } from '@/lib';
-import { chooseStarter } from '@/game/actions';
-import { allPokemon } from '@/game/state';
-import type { Pokemon } from '@/game/types';
-import type { StarterId } from '@/game/types';
-import { PokemonCard } from '@/game/components/PokemonCard';
+import { chooseStarter } from '../actions';
+import { allPokemon } from '../state';
+import type { Pokemon } from '../types';
+import type { StarterId } from '../types';
+import { PokemonCard } from './PokemonCard';
+import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
 
 const starters: StarterId[] = [1, 4, 7, 25];
 

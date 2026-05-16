@@ -1,4 +1,4 @@
-import type { GameItem, InventoryEntry } from '@/game/types';
+import type { GameItem, InventoryEntry } from '../types';
 
 export const items: GameItem[] = [
   {

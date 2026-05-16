@@ -1,4 +1,4 @@
-import type { MountHandle, View } from '@/lib/types';
+import type { MountHandle, View } from './types';
 
 const markerPrefix = 'litcode-part-';
 

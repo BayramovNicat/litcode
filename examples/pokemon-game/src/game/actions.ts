@@ -1,5 +1,5 @@
-import { getItem } from '@/game/data/items';
-import { getLocation } from '@/game/data/locations';
+import { getItem } from './data/items';
+import { getLocation } from './data/locations';
 import {
   applyDamage,
   calculateDamage,
@@ -8,9 +8,9 @@ import {
   expReward,
   expToNextLevel,
   healPokemon,
-} from '@/game/logic/battle';
-import { consumeItem, itemQuantity } from '@/game/logic/inventory';
-import { findWildPokemon } from '@/game/logic/location';
+} from './logic/battle';
+import { consumeItem, itemQuantity } from './logic/inventory';
+import { findWildPokemon } from './logic/location';
 import {
   activePokemon,
   allPokemon,
@@ -21,8 +21,8 @@ import {
   party,
   trainerName,
   wildPokemon,
-} from '@/game/state';
-import type { BattlePokemon, ItemId, LocationId, Pokemon, PokemonMove, StarterId } from '@/game/types';
+} from './state';
+import type { BattlePokemon, ItemId, LocationId, Pokemon, PokemonMove, StarterId } from './types';
 
 function hasAvailablePokemon(): boolean {
   return party.value.some((pokemon) => pokemon.currentHp > 0);

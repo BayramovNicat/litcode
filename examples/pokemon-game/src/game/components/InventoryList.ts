@@ -1,8 +1,9 @@
-import { Button, Card } from '@/components';
 import { component, html } from '@/lib';
-import { getItem } from '@/game/data/items';
-import { useItem } from '@/game/actions';
-import { inventory } from '@/game/state';
+import { getItem } from '../data/items';
+import { useItem } from '../actions';
+import { inventory } from '../state';
+import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
 
 export const InventoryList = component(() =>
   Card({

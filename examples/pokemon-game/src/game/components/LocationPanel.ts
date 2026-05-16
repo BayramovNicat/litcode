@@ -1,9 +1,10 @@
-import { Button, Card } from '@/components';
 import { component, html } from '@/lib';
-import { healAtPokemonCenter, searchForPokemon, travelTo } from '@/game/actions';
-import { locations } from '@/game/data/locations';
-import { activePokemon, currentLocation, currentLocationId, hasStarter } from '@/game/state';
-import type { LocationId } from '@/game/types';
+import { healAtPokemonCenter, searchForPokemon, travelTo } from '../actions';
+import { locations } from '../data/locations';
+import { activePokemon, currentLocation, currentLocationId, hasStarter } from '../state';
+import type { LocationId } from '../types';
+import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
 
 export const LocationPanel = component(() => {
   const player = activePokemon.value;

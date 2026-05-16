@@ -1,4 +1,4 @@
-import type { GameLocation } from '@/game/types';
+import type { GameLocation } from '../types';
 
 export const locations: GameLocation[] = [
   {

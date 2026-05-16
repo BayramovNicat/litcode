@@ -1,14 +1,15 @@
-import { Card, Spinner } from '@/components';
 import { $effect, component, html, mount } from '@/lib';
-import { fetchGenOnePokemon } from '@/game/api/pokeapi';
-import { BattleLog } from '@/game/components/BattleLog';
-import { BattlePanel } from '@/game/components/BattlePanel';
-import { Header } from '@/game/components/Header';
-import { InventoryList } from '@/game/components/InventoryList';
-import { LocationPanel } from '@/game/components/LocationPanel';
-import { PlayerPanel } from '@/game/components/PlayerPanel';
-import { StarterPicker } from '@/game/components/StarterPicker';
-import { loadSavedGame, saveGame } from '@/game/storage';
+import { fetchGenOnePokemon } from './api/pokeapi';
+import { Card } from '../components/Card';
+import { Spinner } from '../components/Spinner';
+import { BattleLog } from './components/BattleLog';
+import { BattlePanel } from './components/BattlePanel';
+import { Header } from './components/Header';
+import { InventoryList } from './components/InventoryList';
+import { LocationPanel } from './components/LocationPanel';
+import { PlayerPanel } from './components/PlayerPanel';
+import { StarterPicker } from './components/StarterPicker';
+import { loadSavedGame, saveGame } from './storage';
 import {
   allPokemon,
   battleLog,
@@ -21,7 +22,7 @@ import {
   party,
   trainerName,
   wildPokemon,
-} from '@/game/state';
+} from './state';
 
 function loadPokemon(): void {
   loading.value = true;
