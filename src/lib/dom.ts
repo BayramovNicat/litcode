@@ -4,7 +4,16 @@ const markerPrefix = 'litcode-part-';
 
 type TemplateCacheEntry = {
   template: HTMLTemplateElement;
+  hasBooleanAttributes: boolean;
+  hasKeys: boolean;
+  dynamicParts?: StaticPart[];
 };
+
+type StaticPart =
+  | { kind: 'child'; index: number; path: number[] }
+  | { kind: 'attribute'; index: number; path: number[]; name: string }
+  | { kind: 'event'; index: number; path: number[]; name: string }
+  | { kind: 'key'; index: number; path: number[] };
 
 type ChildPart = {
   kind: 'child';
@@ -59,6 +68,7 @@ type LitcodeElement = Element & {
 const booleanAttributes = new Set(['disabled', 'checked', 'selected', 'readonly', 'required']);
 const templateCache = new Map<string, TemplateCacheEntry>();
 const booleanSelector = Array.from(booleanAttributes, (attribute) => `[${attribute}=""]`).join(',');
+const keySelector = '[key]';
 let templateCacheDocument: Document | undefined;
 
 function isNode(value: unknown): value is Node {
@@ -156,13 +166,39 @@ function removeEvent(element: Element, name: string): void {
 }
 
 function applyKeys(root: ParentNode): void {
-  root.querySelectorAll('[key]').forEach((element) => {
+  root.querySelectorAll(keySelector).forEach((element) => {
     const key = element.getAttribute('key') ?? undefined;
 
     const target = element as LitcodeElement;
     target.__litcodeKey = key;
     element.removeAttribute('key');
   });
+}
+
+function pathToNode(root: Node, path: number[]): Node | undefined {
+  let node: Node | undefined = root;
+
+  for (let index = 0; index < path.length; index++) {
+    node = node.childNodes[path[index]];
+    if (!node) return undefined;
+  }
+
+  return node;
+}
+
+function getNodePath(node: Node, root: Node): number[] {
+  const path: number[] = [];
+  let current: Node | null = node;
+
+  while (current && current !== root) {
+    const parent = current.parentNode;
+    if (!parent) break;
+
+    path.push(Array.prototype.indexOf.call(parent.childNodes, current));
+    current = parent;
+  }
+
+  return path.reverse();
 }
 
 function setAttributeValue(element: Element, name: string, value: unknown): void {
@@ -190,50 +226,47 @@ export function html(strings: TemplateStringsArray, ...values: TemplateValue[]):
   };
 }
 
-function createFragmentFromTemplate(strings: TemplateStringsArray, values: unknown[]): DocumentFragment {
-  if (templateCacheDocument !== document) {
-    templateCache.clear();
-    templateCacheDocument = document;
-  }
-
+function templateCacheKey(strings: TemplateStringsArray, values: readonly unknown[]): string {
   let source = '';
 
-  strings.forEach((part, index) => {
+  for (let index = 0; index < strings.length; index++) {
+    const part = strings[index];
     source += part;
-    if (index >= values.length) return;
+    if (index >= values.length) continue;
 
     const value = values[index];
     const eventName = typeof value === 'function' ? eventNameFromAttribute(part) : undefined;
 
     if (eventName) {
-      const id = `${markerPrefix}${index}`;
-      source += markerAttributeValue(part, id);
-      return;
+      source += markerAttributeValue(part, `${markerPrefix}${index}`);
+      continue;
     }
 
     const attributeName = isInsideTag(source) ? attributeNameFromAttribute(part) : undefined;
 
-    if (attributeName === 'key') {
-      const id = `${markerPrefix}${index}`;
-      source += markerAttributeValue(part, id);
-      return;
-    }
-
     if (attributeName) {
-      const id = `${markerPrefix}${index}`;
-      source += markerAttributeValue(part, id);
-      return;
+      source += markerAttributeValue(part, `${markerPrefix}${index}`);
+      continue;
     }
 
     if (isInsideTag(source)) {
       source += escapeAttribute(value);
-      return;
+      continue;
     }
 
     source += `<!--${markerPrefix}${index}-->`;
-  });
+  }
 
-  const cacheKey = source.trim();
+  return source.trim();
+}
+
+function getTemplateCacheEntry(strings: TemplateStringsArray, values: readonly unknown[]): TemplateCacheEntry {
+  if (templateCacheDocument !== document) {
+    templateCache.clear();
+    templateCacheDocument = document;
+  }
+
+  const cacheKey = templateCacheKey(strings, values);
   let cached = templateCache.get(cacheKey);
 
   if (!cached) {
@@ -241,73 +274,130 @@ function createFragmentFromTemplate(strings: TemplateStringsArray, values: unkno
     template.innerHTML = cacheKey;
     cached = {
       template,
+      hasBooleanAttributes: booleanSelector ? !!template.content.querySelector(booleanSelector) : false,
+      hasKeys: !!template.content.querySelector(keySelector),
     };
     templateCache.set(cacheKey, cached);
   }
 
+  return cached;
+}
+
+function createFragmentFromCache(cached: TemplateCacheEntry): DocumentFragment {
   const fragment = cached.template.content.cloneNode(true) as DocumentFragment;
 
-  fragment.querySelectorAll(booleanSelector).forEach((element) => {
-    booleanAttributes.forEach((attribute) => {
-      if (element.getAttribute(attribute) !== '') return;
+  if (cached.hasBooleanAttributes) {
+    fragment.querySelectorAll(booleanSelector).forEach((element) => {
+      booleanAttributes.forEach((attribute) => {
+        if (element.getAttribute(attribute) !== '') return;
 
-      if (attribute in element) {
-        (element as unknown as Record<string, boolean>)[attribute] = true;
-      }
+        if (attribute in element) {
+          (element as unknown as Record<string, boolean>)[attribute] = true;
+        }
 
-      element.removeAttribute(attribute);
+        element.removeAttribute(attribute);
+      });
     });
-  });
+  }
 
-  applyKeys(fragment);
+  if (cached.hasKeys) applyKeys(fragment);
 
   return fragment;
 }
 
-function instantiateTemplate(result: TemplateResult): TemplateInstance {
-  const fragment = createFragmentFromTemplate(result.strings, result.values);
-  const nodes = Array.from(fragment.childNodes);
-  const parts: Part[] = [];
-  const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_COMMENT);
+function createFragmentFromTemplate(strings: TemplateStringsArray, values: unknown[]): DocumentFragment {
+  return createFragmentFromCache(getTemplateCacheEntry(strings, values));
+}
+
+function getTemplateParts(cached: TemplateCacheEntry, result: TemplateResult): StaticPart[] {
+  if (cached.dynamicParts) return cached.dynamicParts;
+
+  const root = cached.template.content;
+  const parts: StaticPart[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
   const comments: Comment[] = [];
 
   while (walker.nextNode()) comments.push(walker.currentNode as Comment);
 
-  comments.forEach((comment) => {
+  for (let commentIndex = 0; commentIndex < comments.length; commentIndex++) {
+    const comment = comments[commentIndex];
     const data = comment.data.trim();
-    if (!data.startsWith(markerPrefix)) return;
+    if (!data.startsWith(markerPrefix)) continue;
 
-    const index = Number(data.slice(markerPrefix.length));
-    const part: ChildPart = { kind: 'child', index, marker: comment, nodes: [] };
-    (comment as Comment & { __litcodePart?: ChildPart }).__litcodePart = part;
-    parts.push(part);
-  });
+    parts.push({
+      kind: 'child',
+      index: Number(data.slice(markerPrefix.length)),
+      path: getNodePath(comment, root),
+    });
+  }
 
-  result.values.forEach((value, index) => {
+  for (let index = 0; index < result.values.length; index++) {
     const previous = result.strings[index];
-    const eventName = typeof value === 'function' ? eventNameFromAttribute(previous) : undefined;
+    const eventName = typeof result.values[index] === 'function' ? eventNameFromAttribute(previous) : undefined;
     const attributeName = isInsideTag(previous) ? attributeNameFromAttribute(previous) : undefined;
 
     if (eventName) {
-      fragment.querySelectorAll(`[on${eventName}="${markerPrefix}${index}"]`).forEach((element) => {
-        parts.push({ kind: 'event', index, element, name: eventName });
+      root.querySelectorAll(`[on${eventName}="${markerPrefix}${index}"]`).forEach((element) => {
+        parts.push({ kind: 'event', index, path: getNodePath(element, root), name: eventName });
       });
-      return;
+      continue;
     }
 
     if (attributeName === 'key') {
-      fragment.querySelectorAll(`[key="${markerPrefix}${index}"]`).forEach((element) => {
-        parts.push({ kind: 'key', index, element: element as LitcodeElement });
+      root.querySelectorAll(`[key="${markerPrefix}${index}"]`).forEach((element) => {
+        parts.push({ kind: 'key', index, path: getNodePath(element, root) });
       });
-      return;
+      continue;
     }
 
     if (attributeName) {
-      fragment.querySelectorAll(`[${attributeName}="${markerPrefix}${index}"]`).forEach((element) => {
-        parts.push({ kind: 'attribute', index, element, name: attributeName });
+      root.querySelectorAll(`[${attributeName}="${markerPrefix}${index}"]`).forEach((element) => {
+        parts.push({ kind: 'attribute', index, path: getNodePath(element, root), name: attributeName });
       });
     }
-  });
+  }
+
+  cached.dynamicParts = parts;
+  return parts;
+}
+
+function instantiateTemplate(result: TemplateResult): TemplateInstance {
+  const cached = getTemplateCacheEntry(result.strings, result.values);
+  const fragment = createFragmentFromCache(cached);
+  const nodes = Array.from(fragment.childNodes);
+  const parts: Part[] = [];
+  const staticParts = getTemplateParts(cached, result);
+
+  for (let index = 0; index < staticParts.length; index++) {
+    const staticPart = staticParts[index];
+    const node = pathToNode(fragment, staticPart.path);
+    if (!node) continue;
+
+    if (staticPart.kind === 'child') {
+      const part: ChildPart = {
+        kind: 'child',
+        index: staticPart.index,
+        marker: node as Comment,
+        nodes: [],
+      };
+
+      (node as Comment & { __litcodePart?: ChildPart }).__litcodePart = part;
+      parts.push(part);
+      continue;
+    }
+
+    if (staticPart.kind === 'event') {
+      parts.push({ kind: 'event', index: staticPart.index, element: node as Element, name: staticPart.name });
+      continue;
+    }
+
+    if (staticPart.kind === 'attribute') {
+      parts.push({ kind: 'attribute', index: staticPart.index, element: node as Element, name: staticPart.name });
+      continue;
+    }
+
+    parts.push({ kind: 'key', index: staticPart.index, element: node as LitcodeElement });
+  }
 
   const instance = { result, fragment, parts, nodes };
   updateTemplateInstance(instance, result);
