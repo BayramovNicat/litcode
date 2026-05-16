@@ -425,22 +425,28 @@ function patchText(current: Node, next: Node): void {
 }
 
 function patchAttributes(current: Element, next: Element): void {
-  Array.from(current.attributes).forEach((attribute) => {
-    if (!next.hasAttribute(attribute.name)) {
-      current.removeAttribute(attribute.name);
-    }
-  });
+  const currentAttributes = current.attributes;
+  const nextAttributes = next.attributes;
 
-  Array.from(next.attributes).forEach((attribute) => {
-    if (current.getAttribute(attribute.name) !== attribute.value) {
-      current.setAttribute(attribute.name, attribute.value);
-    }
-  });
+  if (currentAttributes.length === 0 && nextAttributes.length === 0) return;
+
+  for (let index = currentAttributes.length - 1; index >= 0; index--) {
+    const { name } = currentAttributes[index];
+    if (!next.hasAttribute(name)) current.removeAttribute(name);
+  }
+
+  for (let index = 0; index < nextAttributes.length; index++) {
+    const { name, value } = nextAttributes[index];
+    if (current.getAttribute(name) !== value) current.setAttribute(name, value);
+  }
 }
 
 function patchEvents(current: Element, next: Element): void {
   const currentElement = current as LitcodeElement;
   const nextElement = next as LitcodeElement;
+
+  if (!currentElement.__litcodeEvents && !nextElement.__litcodeEvents) return;
+
   const currentEvents = currentElement.__litcodeEvents ?? {};
   const nextEvents = nextElement.__litcodeEvents ?? {};
 
@@ -481,24 +487,36 @@ function patchTextarea(current: HTMLTextAreaElement, next: HTMLTextAreaElement):
 }
 
 function patchFormProperties(current: Element, next: Element): void {
-  if (current instanceof HTMLInputElement && next instanceof HTMLInputElement) {
-    patchInput(current, next);
-    return;
+  switch (current.tagName) {
+    case 'INPUT':
+      patchInput(current as HTMLInputElement, next as HTMLInputElement);
+      return;
+    case 'TEXTAREA':
+      patchTextarea(current as HTMLTextAreaElement, next as HTMLTextAreaElement);
+      return;
+    case 'SELECT':
+      patchSelect(current as HTMLSelectElement, next as HTMLSelectElement);
+      return;
+    case 'OPTION':
+      patchOption(current as HTMLOptionElement, next as HTMLOptionElement);
+  }
+}
+
+function patchElementTextChildren(current: Element, next: Element): boolean {
+  const currentText = current.firstChild;
+  const nextText = next.firstChild;
+
+  if (
+    currentText?.nodeType === Node.TEXT_NODE &&
+    nextText?.nodeType === Node.TEXT_NODE &&
+    currentText.nextSibling === null &&
+    nextText.nextSibling === null
+  ) {
+    patchText(currentText, nextText);
+    return true;
   }
 
-  if (current instanceof HTMLTextAreaElement && next instanceof HTMLTextAreaElement) {
-    patchTextarea(current, next);
-    return;
-  }
-
-  if (current instanceof HTMLSelectElement && next instanceof HTMLSelectElement) {
-    patchSelect(current, next);
-    return;
-  }
-
-  if (current instanceof HTMLOptionElement && next instanceof HTMLOptionElement) {
-    patchOption(current, next);
-  }
+  return false;
 }
 
 function getNodeKey(node: Node): string | undefined {
@@ -506,46 +524,64 @@ function getNodeKey(node: Node): string | undefined {
 }
 
 function hasKeyedChildren(children: Node[]): boolean {
-  return children.some((child) => getNodeKey(child) !== undefined);
+  for (let index = 0; index < children.length; index++) {
+    if (getNodeKey(children[index]) !== undefined) return true;
+  }
+
+  return false;
+}
+
+function hasAllKeys(children: Node[]): boolean {
+  for (let index = 0; index < children.length; index++) {
+    if (getNodeKey(children[index]) === undefined) return false;
+  }
+
+  return children.length > 0;
 }
 
 function patchChildrenByIndex(parent: Node, nextChildren: Node[]): void {
-  const currentChildren = Array.from(parent.childNodes);
-  const length = Math.max(currentChildren.length, nextChildren.length);
+  const currentChildren = parent.childNodes;
+  const currentLength = currentChildren.length;
+  const nextLength = nextChildren.length;
+  const commonLength = Math.min(currentLength, nextLength);
 
-  for (let index = 0; index < length; index++) {
+  for (let index = 0; index < commonLength; index++) {
     const current = currentChildren[index];
     const next = nextChildren[index];
 
-    if (!current && next) {
-      parent.appendChild(next);
-      continue;
-    }
+    patchNode(current, next);
+  }
 
-    if (current && !next) {
-      current.remove();
-      continue;
-    }
+  for (let index = commonLength; index < nextLength; index++) {
+    parent.appendChild(nextChildren[index]);
+  }
 
-    if (current && next) {
-      patchNode(current, next);
-    }
+  for (let index = currentLength - 1; index >= nextLength; index--) {
+    parent.childNodes[index]?.remove();
   }
 }
 
 function patchKeyedChildren(parent: Node, nextChildren: Node[]): void {
   const currentChildren = Array.from(parent.childNodes);
   const keyedCurrent = new Map<string, Node>();
-  const unkeyedCurrent = currentChildren.filter((child) => {
+  const unkeyedCurrent: Node[] = [];
+
+  for (let index = 0; index < currentChildren.length; index++) {
+    const child = currentChildren[index];
     const key = getNodeKey(child);
-    if (key === undefined) return true;
+    if (key === undefined) {
+      unkeyedCurrent.push(child);
+      continue;
+    }
+
     if (!keyedCurrent.has(key)) keyedCurrent.set(key, child);
-    return false;
-  });
+  }
+
   const usedCurrent = new Set<Node>();
   let unkeyedIndex = 0;
 
-  nextChildren.forEach((next, index) => {
+  for (let index = 0; index < nextChildren.length; index++) {
+    const next = nextChildren[index];
     const key = getNodeKey(next);
     let current: Node | undefined;
 
@@ -562,23 +598,70 @@ function patchKeyedChildren(parent: Node, nextChildren: Node[]): void {
 
     if (!current) {
       parent.insertBefore(next, reference);
-      return;
+      continue;
     }
 
     usedCurrent.add(current);
     const patched = patchNode(current, next);
     if (patched !== reference) parent.insertBefore(patched, reference);
-  });
+  }
 
-  currentChildren.forEach((child) => {
+  for (let index = 0; index < currentChildren.length; index++) {
+    const child = currentChildren[index];
     if (!usedCurrent.has(child) && child.parentNode === parent) child.remove();
-  });
+  }
+}
+
+function patchFullyKeyedChildren(parent: Node, nextChildren: Node[]): void {
+  const currentChildren = Array.from(parent.childNodes);
+  const keyedCurrent = new Map<string, Node>();
+  const nextKeys = new Set<string>();
+
+  for (let index = 0; index < currentChildren.length; index++) {
+    const child = currentChildren[index];
+    const key = getNodeKey(child);
+    if (key !== undefined && !keyedCurrent.has(key)) keyedCurrent.set(key, child);
+  }
+
+  for (let index = 0; index < nextChildren.length; index++) {
+    const next = nextChildren[index];
+    const key = getNodeKey(next);
+    if (key !== undefined) nextKeys.add(key);
+    const current = key === undefined ? undefined : keyedCurrent.get(key);
+    const patched = current ? patchNode(current, next) : next;
+    const reference = parent.childNodes[index] ?? null;
+
+    if (patched !== reference) parent.insertBefore(patched, reference);
+  }
+
+  for (let index = currentChildren.length - 1; index >= 0; index--) {
+    const child = currentChildren[index];
+    const key = getNodeKey(child);
+    if ((key === undefined || !nextKeys.has(key)) && child.parentNode === parent) {
+      child.remove();
+    }
+  }
 }
 
 function patchChildren(parent: Node, nextChildren: Node[]): void {
   const currentChildren = Array.from(parent.childNodes);
 
+  if (currentChildren.length === 0) {
+    parent.append(...nextChildren);
+    return;
+  }
+
+  if (nextChildren.length === 0) {
+    parent.textContent = '';
+    return;
+  }
+
   if (hasKeyedChildren(currentChildren) || hasKeyedChildren(nextChildren)) {
+    if (currentChildren.length > 16 && currentChildren.length === nextChildren.length && hasAllKeys(currentChildren) && hasAllKeys(nextChildren)) {
+      patchFullyKeyedChildren(parent, nextChildren);
+      return;
+    }
+
     patchKeyedChildren(parent, nextChildren);
     return;
   }
@@ -590,7 +673,7 @@ function patchElement(current: Element, next: Element): void {
   (current as LitcodeElement).__litcodeKey = (next as LitcodeElement).__litcodeKey;
   patchAttributes(current, next);
   patchEvents(current, next);
-  patchChildren(current, Array.from(next.childNodes));
+  if (!patchElementTextChildren(current, next)) patchChildren(current, Array.from(next.childNodes));
   patchFormProperties(current, next);
 }
 

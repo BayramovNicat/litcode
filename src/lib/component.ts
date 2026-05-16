@@ -50,12 +50,19 @@ function applyProps(element: Element, props: object): void {
   if (style) target.style.cssText = style;
 }
 
+function hasRootProps(props: object): boolean {
+  return Object.keys(props).some((key) => key !== 'children' && key !== 'className');
+}
+
 export function component(render: () => View): Component;
 export function component<Props extends object>(render: (props: Props) => View): Component<Props>;
 export function component<Props extends object>(render: (props: Props) => View): Component<Props> {
   return ((props?: Props) => {
     const nextProps = (props ?? {}) as Props;
     const view = render(nextProps);
+
+    if (!hasRootProps(nextProps)) return view;
+
     const renderedView = isTemplateResult(view) ? toFragment(view) : view;
     const element = firstElement(renderedView);
 
