@@ -1,7 +1,7 @@
 import { JSDOM } from 'jsdom';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { html, mount } from '../src/lib/dom';
+import { html, mount, repeat } from '../src/lib/dom';
 
 function setupDom(): HTMLElement {
   const dom = new JSDOM('<!doctype html><div id="app"></div>', {
@@ -176,5 +176,23 @@ describe('dom patching', () => {
     assert.equal(app.querySelector('input'), input);
     assert.equal(document.activeElement, input);
     assert.equal(input.value, 'ab');
+  });
+
+  it('reorders repeated keyed templates without replacing nodes', () => {
+    const app = setupDom();
+    const view = (items: string[]) => html`<ul>${repeat(items, (item) => item, (item) => html`<li>${item}</li>`)}</ul>`;
+    const handle = mount(view(['a', 'b', 'c']), app);
+    const items = Array.from(app.querySelectorAll('li'));
+
+    handle.update(view(['c', 'a', 'b']));
+
+    const nextItems = Array.from(app.querySelectorAll('li'));
+    assert.equal(nextItems[0], items[2]);
+    assert.equal(nextItems[1], items[0]);
+    assert.equal(nextItems[2], items[1]);
+    assert.deepEqual(
+      nextItems.map((item) => item.textContent),
+      ['c', 'a', 'b'],
+    );
   });
 });

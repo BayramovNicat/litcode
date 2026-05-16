@@ -1,6 +1,6 @@
 import { JSDOM } from 'jsdom';
 import { performance } from 'node:perf_hooks';
-import { component, html, mount, type View } from '../src/lib';
+import { component, html, mount, repeat, type View } from '../src/lib';
 
 type Bench = {
   name: string;
@@ -83,6 +83,10 @@ function print(result: BenchResult): void {
 
 function keyedListView(items: number[]): View {
   return html`<ul>${items.map((item) => html`<li key=${item}>Item ${item}</li>`)}</ul>`;
+}
+
+function repeatedListView(items: number[]): View {
+  return html`<ul>${repeat(items, (item) => item, (item) => html`<li>Item ${item}</li>`)}</ul>`;
 }
 
 function unkeyedListView(offset: number): View {
@@ -185,6 +189,37 @@ const benches: Bench[] = [
       return () => {
         offset = (offset + 1) % items.length;
         handle.update(keyedListView([...items.slice(offset), ...items.slice(0, offset)]));
+      };
+    },
+  },
+  {
+    name: 'repeat rotate 1k',
+    iterations: 50,
+    warmup: 5,
+    setup() {
+      const app = setupDom();
+      const items = Array.from({ length: 1_000 }, (_, index) => index);
+      const handle = mount(repeatedListView(items), app);
+      let offset = 0;
+      return () => {
+        offset = (offset + 1) % items.length;
+        handle.update(repeatedListView([...items.slice(offset), ...items.slice(0, offset)]));
+      };
+    },
+  },
+  {
+    name: 'repeat reverse 1k',
+    iterations: 10,
+    warmup: 2,
+    setup() {
+      const app = setupDom();
+      const items = Array.from({ length: 1_000 }, (_, index) => index);
+      const handle = mount(repeatedListView(items), app);
+      const reversed = [...items].reverse();
+      let flipped = false;
+      return () => {
+        flipped = !flipped;
+        handle.update(repeatedListView(flipped ? reversed : items));
       };
     },
   },
