@@ -249,11 +249,11 @@ function getNodePath(node: Node, root: Node): number[] {
   let current: Node | null = node;
 
   while (current && current !== root) {
-    const parent = current.parentNode;
-    if (!parent) break;
+    const parentNode: ParentNode | null = current.parentNode;
+    if (!parentNode) break;
 
-    path.push(Array.prototype.indexOf.call(parent.childNodes, current));
-    current = parent;
+    path.push(Array.prototype.indexOf.call(parentNode.childNodes, current));
+    current = parentNode;
   }
 
   return path.reverse();
@@ -1020,7 +1020,7 @@ function patchChildren(parent: Node, nextChildren: Node[]): void {
   const currentChildren = Array.from(parent.childNodes);
 
   if (currentChildren.length === 0) {
-    parent.append(...nextChildren);
+    appendNodes(parent, nextChildren);
     return;
   }
 
