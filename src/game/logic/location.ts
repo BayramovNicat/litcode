@@ -1,6 +1,6 @@
-import { getLocation } from '../data/locations';
-import type { BattlePokemon, LocationId, Pokemon } from '../types';
-import { createBattlePokemon } from './battle';
+import { getLocation } from '@/game/data/locations';
+import type { BattlePokemon, LocationId, Pokemon } from '@/game/types';
+import { createBattlePokemon } from '@/game/logic/battle';
 
 function sample<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];

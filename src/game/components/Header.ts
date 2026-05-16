@@ -1,6 +1,6 @@
-import { Badge } from '../../components';
-import { component, html } from '../../lib';
-import { caughtCount, currentLocation, trainerName } from '../state';
+import { Badge } from '@/components';
+import { component, html } from '@/lib';
+import { caughtCount, currentLocation, trainerName } from '@/game/state';
 
 export const Header = component(
   () => html`

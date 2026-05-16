@@ -1,4 +1,4 @@
-import type { InventoryEntry, ItemId } from '../types';
+import type { InventoryEntry, ItemId } from '@/game/types';
 
 export function itemQuantity(inventory: InventoryEntry[], itemId: ItemId): number {
   return inventory.find((entry) => entry.itemId === itemId)?.quantity ?? 0;

@@ -1,4 +1,4 @@
-import type { BattlePokemon, Pokemon, PokemonMove } from '../types';
+import type { BattlePokemon, Pokemon, PokemonMove } from '@/game/types';
 
 export function createBattlePokemon(pokemon: Pokemon): BattlePokemon {
   return {

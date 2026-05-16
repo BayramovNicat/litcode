@@ -1,7 +1,7 @@
-import { $derived, $state } from '../lib';
-import { startingInventory } from './data/items';
-import { getLocation } from './data/locations';
-import type { BattlePokemon, InventoryEntry, LocationId, Pokemon } from './types';
+import { $derived, $state } from '@/lib';
+import { startingInventory } from '@/game/data/items';
+import { getLocation } from '@/game/data/locations';
+import type { BattlePokemon, InventoryEntry, LocationId, Pokemon } from '@/game/types';
 
 export const allPokemon = $state<Pokemon[]>([]);
 export const loading = $state(true);

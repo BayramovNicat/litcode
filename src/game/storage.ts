@@ -1,5 +1,5 @@
-import { startingInventory } from './data/items';
-import { getLocation } from './data/locations';
+import { startingInventory } from '@/game/data/items';
+import { getLocation } from '@/game/data/locations';
 import {
   battleLog,
   currentLocationId,
@@ -8,14 +8,14 @@ import {
   party,
   trainerName,
   wildPokemon,
-} from './state';
+} from '@/game/state';
 import type {
   BattlePokemon,
   InventoryEntry,
   LearnableMove,
   LocationId,
   PokemonMove,
-} from './types';
+} from '@/game/types';
 
 const saveKey = 'kanto-runes-save';
 

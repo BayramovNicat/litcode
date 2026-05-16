@@ -1,6 +1,6 @@
-import { Badge, ProgressBar } from '../../components';
-import { component, html } from '../../lib';
-import type { BattlePokemon, Pokemon } from '../types';
+import { Badge, ProgressBar } from '@/components';
+import { component, html } from '@/lib';
+import type { BattlePokemon, Pokemon } from '@/game/types';
 
 export type PokemonCardProps = {
   pokemon: Pokemon | BattlePokemon;

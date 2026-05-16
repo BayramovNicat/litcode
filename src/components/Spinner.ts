@@ -1,4 +1,4 @@
-import { component, html } from '../lib';
+import { component, html } from '@/lib';
 
 export const Spinner = component(
   () => html`

@@ -1,4 +1,4 @@
-import type { Children, Component, View } from './types';
+import type { Children, Component, View } from '@/lib/types';
 
 export function component<Props extends object>(render: Component<Props>): Component<Props> {
   return render;

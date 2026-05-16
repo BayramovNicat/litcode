@@ -1,4 +1,4 @@
-import type { LearnableMove, Pokemon, PokemonEvolution, PokemonMove } from '../types';
+import type { LearnableMove, Pokemon, PokemonEvolution, PokemonMove } from '@/game/types';
 
 type PokeApiListResponse = {
   results: { name: string; url: string }[];

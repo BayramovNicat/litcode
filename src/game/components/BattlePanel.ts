@@ -1,8 +1,8 @@
-import { Button, Card, EmptyState } from '../../components';
-import { component, html } from '../../lib';
-import { attackWildPokemon, runFromBattle, useItem } from '../actions';
-import { activePokemon, wildPokemon } from '../state';
-import { PokemonCard } from './PokemonCard';
+import { Button, Card, EmptyState } from '@/components';
+import { component, html } from '@/lib';
+import { attackWildPokemon, runFromBattle, useItem } from '@/game/actions';
+import { activePokemon, wildPokemon } from '@/game/state';
+import { PokemonCard } from '@/game/components/PokemonCard';
 
 export const BattlePanel = component(() => {
   const player = activePokemon.value;

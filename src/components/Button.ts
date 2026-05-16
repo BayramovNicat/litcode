@@ -1,4 +1,4 @@
-import { component, html } from '../lib';
+import { component, html } from '@/lib';
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 

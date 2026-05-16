@@ -1,5 +1,5 @@
-import type { View } from '../lib';
-import { component, html } from '../lib';
+import type { View } from '@/lib';
+import { component, html } from '@/lib';
 
 export type CardProps = {
   children: View;
