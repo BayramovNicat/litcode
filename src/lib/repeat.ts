@@ -1,5 +1,10 @@
 import { type ChildPart, type RepeatBlock } from './template';
-import { normalize, patchNodesBeforeMarker, instantiateRepeatBlock, isTemplateResult } from './dom-internal';
+import {
+  normalize,
+  patchNodesBeforeMarker,
+  instantiateRepeatBlock,
+  isTemplateResult,
+} from './dom-internal';
 import { updateTemplateInstance, destroyTemplateInstance } from './dom-template';
 
 export function updateRepeatChildPart(part: ChildPart, value: any): void {
@@ -33,7 +38,11 @@ export function updateRepeatChildPart(part: ChildPart, value: any): void {
       if (Object.is(current.item, item) && current.index === index) {
         current.item = item;
         current.index = index;
-      } else if (current.instance && isTemplateResult(rendered) && current.instance.result.strings === rendered.strings) {
+      } else if (
+        current.instance &&
+        isTemplateResult(rendered) &&
+        current.instance.result.strings === rendered.strings
+      ) {
         updateTemplateInstance(current.instance, rendered);
         current.nodes = current.instance.nodes;
         current.item = item;
@@ -73,7 +82,12 @@ export function updateRepeatChildPart(part: ChildPart, value: any): void {
   part.repeat = { blocks: nextBlocks };
 }
 
-export function moveRepeatBlocks(parent: Node, blocks: RepeatBlock[], sources: number[], marker: Comment): void {
+export function moveRepeatBlocks(
+  parent: Node,
+  blocks: RepeatBlock[],
+  sources: number[],
+  marker: Comment,
+): void {
   const stable = longestIncreasingSubsequence(sources);
 
   if (stable.length < blocks.length / 2) {
@@ -117,7 +131,8 @@ export function collectRepeatNodes(blocks: RepeatBlock[]): Node[] {
 }
 
 export function removeNodes(nodes: Node[]): void {
-  for (let index = 0; index < nodes.length; index++) nodes[index].parentNode?.removeChild(nodes[index]);
+  for (let index = 0; index < nodes.length; index++)
+    nodes[index].parentNode?.removeChild(nodes[index]);
 }
 
 function pushNodes(target: Node[], nodes: Node[]): void {

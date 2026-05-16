@@ -8,7 +8,9 @@ export function isNode(value: unknown): value is Node {
 }
 
 export function isTemplateResult(value: unknown): value is TemplateResult {
-  return !!value && typeof value === 'object' && (value as TemplateResult).__litcodeTemplate === true;
+  return (
+    !!value && typeof value === 'object' && (value as TemplateResult).__litcodeTemplate === true
+  );
 }
 
 export function isRepeatResult(value: unknown): value is RepeatResult {
@@ -25,7 +27,8 @@ export function normalize(view: View): Node[] {
 
     for (let index = 0; index < view.length; index++) {
       const childNodes = normalize(view[index]);
-      for (let nodeIndex = 0; nodeIndex < childNodes.length; nodeIndex++) nodes.push(childNodes[nodeIndex]);
+      for (let nodeIndex = 0; nodeIndex < childNodes.length; nodeIndex++)
+        nodes.push(childNodes[nodeIndex]);
     }
 
     return nodes;
@@ -51,14 +54,24 @@ export function normalizeRepeat(result: RepeatResult): Node[] {
 
   for (let index = 0; index < result.items.length; index++) {
     const item = result.items[index];
-    const block = instantiateRepeatBlock(result.render(item, index), String(result.key(item, index)), item, index);
+    const block = instantiateRepeatBlock(
+      result.render(item, index),
+      String(result.key(item, index)),
+      item,
+      index,
+    );
     pushNodes(nodes, block.nodes);
   }
 
   return nodes;
 }
 
-export function instantiateRepeatBlock(view: View, key: string, item?: unknown, index = 0): RepeatBlock {
+export function instantiateRepeatBlock(
+  view: View,
+  key: string,
+  item?: unknown,
+  index = 0,
+): RepeatBlock {
   const nodes = normalize(view);
   const instance = (nodes as InstantiatedNodes).__litcodeInstance;
   return { key, item, index, nodes, instance };

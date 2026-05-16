@@ -1,6 +1,4 @@
-import {
-  type LitcodeElement,
-} from './template';
+import { type LitcodeElement } from './template';
 
 export function sameNodeType(current: Node, next: Node): boolean {
   if (current.nodeType !== next.nodeType) return false;
@@ -215,7 +213,10 @@ export function patchKeyedChildren(parent: Node, nextChildren: Node[]): void {
     if (key !== undefined) {
       current = keyedCurrent.get(key);
     } else {
-      while (unkeyedIndex < unkeyedCurrent.length && usedCurrent.has(unkeyedCurrent[unkeyedIndex])) {
+      while (
+        unkeyedIndex < unkeyedCurrent.length &&
+        usedCurrent.has(unkeyedCurrent[unkeyedIndex])
+      ) {
         unkeyedIndex++;
       }
       current = unkeyedCurrent[unkeyedIndex++];
@@ -360,7 +361,12 @@ export function patchChildren(parent: Node, nextChildren: Node[]): void {
   }
 
   if (hasKeyedChildren(currentChildren) || hasKeyedChildren(nextChildren)) {
-    if (currentChildren.length > 16 && currentChildren.length === nextChildren.length && hasAllKeys(currentChildren) && hasAllKeys(nextChildren)) {
+    if (
+      currentChildren.length > 16 &&
+      currentChildren.length === nextChildren.length &&
+      hasAllKeys(currentChildren) &&
+      hasAllKeys(nextChildren)
+    ) {
       patchFullyKeyedChildren(parent, nextChildren);
       return;
     }

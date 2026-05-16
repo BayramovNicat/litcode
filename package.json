@@ -1,11 +1,44 @@
 {
-  "name": "litcode",
-  "private": true,
-  "version": "0.0.0",
+  "name": "@holmityd/litcode",
+  "version": "0.1.0",
+  "description": "Tiny TypeScript-first frontend rendering primitives.",
   "type": "module",
+  "license": "MIT",
+  "homepage": "https://github.com/holmityd/litcode#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/holmityd/litcode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/holmityd/litcode/issues"
+  },
+  "keywords": [
+    "dom",
+    "frontend",
+    "html",
+    "template",
+    "typescript",
+    "ui"
+  ],
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build && tsc -p tsconfig.build.json",
+    "build:demo": "tsc && vite build --mode demo",
+    "prepublishOnly": "npm run test && npm run build",
     "preview": "vite preview",
     "test": "node --import tsx --test tests/**/*.test.ts",
     "bench": "tsx benchmarks/dom.bench.ts",
@@ -14,16 +47,18 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check"
   },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.6.0"
+  },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.0",
     "@types/jsdom": "^28.0.3",
     "@types/node": "^25.8.0",
-    "clsx": "^2.1.1",
     "jsdom": "^29.1.1",
     "lit-html": "^3.3.3",
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.8.0",
-    "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.0",
     "tsx": "^4.22.0",
     "typescript": "~6.0.2",

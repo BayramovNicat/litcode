@@ -70,18 +70,30 @@ function print(result: BenchResult): void {
 }
 
 function keyedListView(items: number[]): View {
-  return html`<ul>${items.map((item) => html`<li key=${item}>Item ${item}</li>`)}</ul>`;
+  return html`<ul>
+    ${items.map((item) => html`<li key=${item}>Item ${item}</li>`)}
+  </ul>`;
 }
 
 function repeatedListView(items: number[]): View {
-  return html`<ul>${repeat(items, (item) => item, (item) => html`<li>Item ${item}</li>`)}</ul>`;
+  return html`<ul>
+    ${repeat(
+      items,
+      (item) => item,
+      (item) => html`<li>Item ${item}</li>`,
+    )}
+  </ul>`;
 }
 
 function unkeyedListView(offset: number): View {
-  return html`<ul>${Array.from({ length: 1_000 }, (_, index) => html`<li>Item ${index + offset}</li>`)}</ul>`;
+  return html`<ul>
+    ${Array.from({ length: 1_000 }, (_, index) => html`<li>Item ${index + offset}</li>`)}
+  </ul>`;
 }
 
-const Passthrough = component<{ children: View }>(({ children }) => html`<section>${children}</section>`);
+const Passthrough = component<{ children: View }>(
+  ({ children }) => html`<section>${children}</section>`,
+);
 const RootProp = component<{ className: string; children: View }>(
   ({ children }) => html`<section>${children}</section>`,
 );
@@ -101,7 +113,10 @@ const benches: Bench[] = [
     iterations: 20_000,
     setup(target) {
       let active = false;
-      const view = () => html`<button class=${active ? 'active' : 'idle'} data-state=${active ? 'on' : 'off'}>Go</button>`;
+      const view = () =>
+        html`<button class=${active ? 'active' : 'idle'} data-state=${active ? 'on' : 'off'}>
+          Go
+        </button>`;
       const handle = mount(view(), target);
       return () => {
         active = !active;
@@ -136,7 +151,10 @@ const benches: Bench[] = [
     iterations: 2_000,
     setup(target) {
       let expanded = false;
-      const view = () => html`<ul>${Array.from({ length: expanded ? 100 : 50 }, (_, index) => html`<li>${index}</li>`)}</ul>`;
+      const view = () =>
+        html`<ul>
+          ${Array.from({ length: expanded ? 100 : 50 }, (_, index) => html`<li>${index}</li>`)}
+        </ul>`;
       const handle = mount(view(), target);
       return () => {
         expanded = !expanded;
@@ -237,7 +255,16 @@ const benches: Bench[] = [
       const view = () => html`
         <main>
           <header><h1>${count}</h1></header>
-          <section>${Array.from({ length: 100 }, (_, index) => html`<article><h2>${index}</h2><p>${count + index}</p></article>`)}</section>
+          <section>
+            ${Array.from(
+              { length: 100 },
+              (_, index) =>
+                html`<article>
+                  <h2>${index}</h2>
+                  <p>${count + index}</p>
+                </article>`,
+            )}
+          </section>
         </main>
       `;
       const handle = mount(view(), target);
@@ -265,7 +292,11 @@ const benches: Bench[] = [
     iterations: 20_000,
     setup(target) {
       let count = 0;
-      const view = () => RootProp({ className: count % 2 ? 'odd' : 'even', children: html`<button>${count}</button>` });
+      const view = () =>
+        RootProp({
+          className: count % 2 ? 'odd' : 'even',
+          children: html`<button>${count}</button>`,
+        });
       const handle = mount(view(), target);
       return () => {
         count++;

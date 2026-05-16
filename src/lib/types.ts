@@ -11,7 +11,15 @@ export interface RepeatResult<Item = unknown> {
   render(item: Item, index: number): View;
 }
 
-export type AnyNode = Node | TemplateResult | RepeatResult | string | number | boolean | null | undefined;
+export type AnyNode =
+  | Node
+  | TemplateResult
+  | RepeatResult
+  | string
+  | number
+  | boolean
+  | null
+  | undefined;
 
 export type View = AnyNode | View[];
 

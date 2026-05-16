@@ -9,7 +9,8 @@ type BenchResult = {
   samples: number[];
 };
 
-const chromePath = process.env.CHROME_PATH ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chromePath =
+  process.env.CHROME_PATH ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const timeoutMs = 180_000;
 
 function mean(values: number[]): number {
@@ -34,7 +35,10 @@ function print(result: BenchResult): void {
 
 function waitForDevtoolsUrl(chrome: ReturnType<typeof spawn>): Promise<string> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('Timed out waiting for Chrome DevTools URL')), 15_000);
+    const timer = setTimeout(
+      () => reject(new Error('Timed out waiting for Chrome DevTools URL')),
+      15_000,
+    );
 
     chrome.stderr?.on('data', (chunk) => {
       const output = String(chunk);
@@ -54,7 +58,9 @@ async function waitForPageWebSocket(devtoolsUrl: string, pageUrl: string): Promi
   const started = Date.now();
 
   while (Date.now() - started < timeoutMs) {
-    const pages = (await fetch(`${origin}/json/list`).then((response) => response.json())) as Array<{
+    const pages = (await fetch(`${origin}/json/list`).then((response) =>
+      response.json(),
+    )) as Array<{
       url: string;
       webSocketDebuggerUrl?: string;
     }>;
@@ -153,9 +159,13 @@ try {
 
   await new Promise<void>((resolve, reject) => {
     socket?.addEventListener('open', () => resolve(), { once: true });
-    socket?.addEventListener('error', () => reject(new Error('Failed to connect to benchmark page')), {
-      once: true,
-    });
+    socket?.addEventListener(
+      'error',
+      () => reject(new Error('Failed to connect to benchmark page')),
+      {
+        once: true,
+      },
+    );
   });
 
   const results = await waitForResults(socket);

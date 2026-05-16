@@ -86,11 +86,19 @@ function print(result: BenchResult): void {
 }
 
 function lcRepeatedListView(items: number[]): View {
-  return lcHtml`<ul>${lcRepeat(items, (item) => item, (item) => lcHtml`<li>Item ${item}</li>`)}</ul>`;
+  return lcHtml`<ul>${lcRepeat(
+    items,
+    (item) => item,
+    (item) => lcHtml`<li>Item ${item}</li>`,
+  )}</ul>`;
 }
 
 function litRepeatedListView(items: number[]) {
-  return litHtml`<ul>${litRepeat(items, (item) => item, (item) => litHtml`<li>Item ${item}</li>`)}</ul>`;
+  return litHtml`<ul>${litRepeat(
+    items,
+    (item) => item,
+    (item) => litHtml`<li>Item ${item}</li>`,
+  )}</ul>`;
 }
 
 function lcUnkeyedListView(offset: number): View {
@@ -128,7 +136,8 @@ const benches: Bench[] = [
     setup() {
       const app = setupDom();
       let active = false;
-      const view = () => lcHtml`<button class=${active ? 'active' : 'idle'} data-state=${active ? 'on' : 'off'}>Go</button>`;
+      const view = () =>
+        lcHtml`<button class=${active ? 'active' : 'idle'} data-state=${active ? 'on' : 'off'}>Go</button>`;
       const handle = lcMount(view(), app);
       return () => {
         active = !active;
@@ -142,7 +151,8 @@ const benches: Bench[] = [
     setup() {
       const app = setupDom();
       let active = false;
-      const view = () => litHtml`<button class=${active ? 'active' : 'idle'} data-state=${active ? 'on' : 'off'}>Go</button>`;
+      const view = () =>
+        litHtml`<button class=${active ? 'active' : 'idle'} data-state=${active ? 'on' : 'off'}>Go</button>`;
       litRender(view(), app);
       return () => {
         active = !active;

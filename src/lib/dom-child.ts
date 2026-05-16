@@ -1,6 +1,16 @@
 import { type ChildPart, type TemplateInstance } from './template';
-import { isTemplateResult, normalize, findChildPartBefore, patchNodesBeforeMarker, resetChildPart } from './dom-internal';
-import { updateTemplateInstance, destroyTemplateInstance, instantiateTemplate } from './dom-template';
+import {
+  isTemplateResult,
+  normalize,
+  findChildPartBefore,
+  patchNodesBeforeMarker,
+  resetChildPart,
+} from './dom-internal';
+import {
+  updateTemplateInstance,
+  destroyTemplateInstance,
+  instantiateTemplate,
+} from './dom-template';
 import { updateRepeatChildPart } from './repeat';
 
 function destroyRepeatBlocks(repeat: ChildPart['repeat']): void {
@@ -99,7 +109,8 @@ function updateTemplateArrayChildPart(part: ChildPart, value: unknown): boolean 
     }
 
     if (canUpdate) {
-      for (let index = 0; index < length; index++) updateTemplateInstance(current[index], value[index]);
+      for (let index = 0; index < length; index++)
+        updateTemplateInstance(current[index], value[index]);
       part.nodes = collectInstanceNodes(current);
       part.instance = undefined;
       part.repeat = undefined;
@@ -114,7 +125,8 @@ function updateTemplateArrayChildPart(part: ChildPart, value: unknown): boolean 
   for (let index = 0; index < length; index++) {
     const instance = instantiateTemplate(value[index]);
     instances[index] = instance;
-    for (let nodeIndex = 0; nodeIndex < instance.nodes.length; nodeIndex++) nodes.push(instance.nodes[nodeIndex]);
+    for (let nodeIndex = 0; nodeIndex < instance.nodes.length; nodeIndex++)
+      nodes.push(instance.nodes[nodeIndex]);
   }
 
   const patchedNodes = patchNodesBeforeMarker(parent, part.nodes, nodes, part.marker);
@@ -131,12 +143,16 @@ function collectInstanceNodes(instances: TemplateInstance[]): Node[] {
   const nodes: Node[] = [];
   for (let index = 0; index < instances.length; index++) {
     const instanceNodes = instances[index].nodes;
-    for (let nodeIndex = 0; nodeIndex < instanceNodes.length; nodeIndex++) nodes.push(instanceNodes[nodeIndex]);
+    for (let nodeIndex = 0; nodeIndex < instanceNodes.length; nodeIndex++)
+      nodes.push(instanceNodes[nodeIndex]);
   }
   return nodes;
 }
 
-export function updatePrimitiveChildPart(part: ChildPart, value: string | number | boolean | null | undefined): boolean {
+export function updatePrimitiveChildPart(
+  part: ChildPart,
+  value: string | number | boolean | null | undefined,
+): boolean {
   const parent = part.marker.parentNode;
   if (!parent) return true;
 
@@ -167,12 +183,22 @@ export function updatePrimitiveChildPart(part: ChildPart, value: string | number
   return true;
 }
 
-export function isPrimitiveChild(value: unknown): value is string | number | boolean | null | undefined {
-  return value == null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+export function isPrimitiveChild(
+  value: unknown,
+): value is string | number | boolean | null | undefined {
+  return (
+    value == null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  );
 }
 
 function removeNodes(nodes: Node[]): void {
-  for (let index = 0; index < nodes.length; index++) nodes[index].parentNode?.removeChild(nodes[index]);
+  for (let index = 0; index < nodes.length; index++)
+    nodes[index].parentNode?.removeChild(nodes[index]);
 }
 
-function isRepeatResult(value: any) { return value?.__litcodeRepeat === true; }
+function isRepeatResult(value: any) {
+  return value?.__litcodeRepeat === true;
+}

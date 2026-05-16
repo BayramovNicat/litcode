@@ -100,14 +100,24 @@ describe('dom patching', () => {
   it('reorders keyed children without replacing nodes', () => {
     const app = setupDom();
     const handle = mount(
-      html`<ul><li key="a">A</li><li key="b">B</li><li key="c">C</li></ul>`,
+      html`<ul>
+        <li key="a">A</li>
+        <li key="b">B</li>
+        <li key="c">C</li>
+      </ul>`,
       app,
     );
     const first = app.querySelector('[data-id="none"]');
     assert.equal(first, null);
     const items = Array.from(app.querySelectorAll('li'));
 
-    handle.update(html`<ul><li key="c">C</li><li key="a">A!</li><li key="b">B</li></ul>`);
+    handle.update(
+      html`<ul>
+        <li key="c">C</li>
+        <li key="a">A!</li>
+        <li key="b">B</li>
+      </ul>`,
+    );
 
     const nextItems = Array.from(app.querySelectorAll('li'));
     assert.equal(nextItems[0], items[2]);
@@ -117,15 +127,29 @@ describe('dom patching', () => {
       nextItems.map((item) => item.textContent),
       ['C', 'A!', 'B'],
     );
-    assert.equal(nextItems.some((item) => item.hasAttribute('key')), false);
+    assert.equal(
+      nextItems.some((item) => item.hasAttribute('key')),
+      false,
+    );
   });
 
   it('removes stale keyed children and inserts new ones', () => {
     const app = setupDom();
-    const handle = mount(html`<ul><li key="a">A</li><li key="b">B</li></ul>`, app);
+    const handle = mount(
+      html`<ul>
+        <li key="a">A</li>
+        <li key="b">B</li>
+      </ul>`,
+      app,
+    );
     const a = app.querySelector('li')!;
 
-    handle.update(html`<ul><li key="a">A</li><li key="c">C</li></ul>`);
+    handle.update(
+      html`<ul>
+        <li key="a">A</li>
+        <li key="c">C</li>
+      </ul>`,
+    );
 
     const items = Array.from(app.querySelectorAll('li'));
     assert.equal(items[0], a);
@@ -138,12 +162,18 @@ describe('dom patching', () => {
   it('syncs select value after option children change', () => {
     const app = setupDom();
     const handle = mount(
-      html`<select value="a"><option value="a">A</option><option value="b">B</option></select>`,
+      html`<select value="a">
+        <option value="a">A</option>
+        <option value="b">B</option>
+      </select>`,
       app,
     );
 
     handle.update(
-      html`<select value="c"><option value="a">A</option><option value="c">C</option></select>`,
+      html`<select value="c">
+        <option value="a">A</option>
+        <option value="c">C</option>
+      </select>`,
     );
 
     const select = app.querySelector('select')!;
@@ -180,7 +210,14 @@ describe('dom patching', () => {
 
   it('reorders repeated keyed templates without replacing nodes', () => {
     const app = setupDom();
-    const view = (items: string[]) => html`<ul>${repeat(items, (item) => item, (item) => html`<li>${item}</li>`)}</ul>`;
+    const view = (items: string[]) =>
+      html`<ul>
+        ${repeat(
+          items,
+          (item) => item,
+          (item) => html`<li>${item}</li>`,
+        )}
+      </ul>`;
     const handle = mount(view(['a', 'b', 'c']), app);
     const items = Array.from(app.querySelectorAll('li'));
 

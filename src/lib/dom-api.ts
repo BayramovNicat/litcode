@@ -1,6 +1,10 @@
 import type { MountHandle, View, TemplateResult } from './types';
 import { isTemplateResult, normalize } from './dom-internal';
-import { updateTemplateInstance, instantiateTemplate, destroyTemplateInstance } from './dom-template';
+import {
+  updateTemplateInstance,
+  instantiateTemplate,
+  destroyTemplateInstance,
+} from './dom-template';
 import { patchChildren } from './patch';
 
 export function render(view: View, target: ParentNode): MountHandle {
