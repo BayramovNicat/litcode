@@ -412,7 +412,60 @@ function findChildPartBefore(nodes: Node[], fallbackParent: Node): ChildPart | u
     : undefined;
 }
 
+function isPrimitiveChild(value: unknown): value is string | number | boolean | null | undefined {
+  return (
+    value === null ||
+    value === undefined ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  );
+}
+
+function updatePrimitiveChildPart(part: ChildPart, value: string | number | boolean | null | undefined): boolean {
+  const parent = part.marker.parentNode;
+  if (!parent) return true;
+
+  if (value === null || value === undefined || value === false) {
+    for (let index = 0; index < part.nodes.length; index++) {
+      part.nodes[index].parentNode?.removeChild(part.nodes[index]);
+    }
+
+    part.nodes = [];
+    part.instance = undefined;
+    return true;
+  }
+
+  const text = String(value);
+  const current = part.nodes[0];
+
+  if (current?.nodeType === Node.TEXT_NODE) {
+    if (current.textContent !== text) current.textContent = text;
+
+    for (let index = 1; index < part.nodes.length; index++) {
+      part.nodes[index].parentNode?.removeChild(part.nodes[index]);
+    }
+
+    part.nodes = [current];
+    part.instance = undefined;
+    return true;
+  }
+
+  const next = document.createTextNode(text);
+  parent.insertBefore(next, current ?? part.marker);
+
+  for (let index = 0; index < part.nodes.length; index++) {
+    part.nodes[index].parentNode?.removeChild(part.nodes[index]);
+  }
+
+  part.nodes = [next];
+  part.instance = undefined;
+  return true;
+}
+
 function updateChildPart(part: ChildPart, value: unknown): void {
+  if (isPrimitiveChild(value) && updatePrimitiveChildPart(part, value)) return;
+
   if (part.instance && isTemplateResult(value) && part.instance.result.strings === value.strings) {
     updateTemplateInstance(part.instance, value);
     part.nodes = part.instance.nodes;
@@ -462,12 +515,13 @@ function patchChildPartNodes(
 }
 
 function updateTemplateInstance(instance: TemplateInstance, next: TemplateResult): void {
-  instance.parts.forEach((part) => {
+  for (let index = 0; index < instance.parts.length; index++) {
+    const part = instance.parts[index];
     const value = next.values[part.index];
 
     if (part.kind === 'child') {
       updateChildPart(part, value);
-      return;
+      continue;
     }
 
     if (part.kind === 'attribute') {
@@ -475,17 +529,17 @@ function updateTemplateInstance(instance: TemplateInstance, next: TemplateResult
         setAttributeValue(part.element, part.name, value);
         part.value = value;
       }
-      return;
+      continue;
     }
 
     if (part.kind === 'event') {
       if (typeof value === 'function') setEvent(part.element, part.name, value as EventListener);
-      return;
+      continue;
     }
 
     part.element.__litcodeKey = String(value);
     part.element.removeAttribute('key');
-  });
+  }
 
   instance.result = next;
 }
@@ -705,7 +759,9 @@ function patchKeyedChildren(parent: Node, nextChildren: Node[]): void {
 function patchFullyKeyedChildren(parent: Node, nextChildren: Node[]): void {
   const currentChildren = Array.from(parent.childNodes);
   const keyedCurrent = new Map<string, Node>();
-  const nextKeys = new Set<string>();
+  const sources = new Array<number>(nextChildren.length);
+  const patchedChildren = new Array<Node>(nextChildren.length);
+  let matched = 0;
 
   for (let index = 0; index < currentChildren.length; index++) {
     const child = currentChildren[index];
@@ -716,21 +772,74 @@ function patchFullyKeyedChildren(parent: Node, nextChildren: Node[]): void {
   for (let index = 0; index < nextChildren.length; index++) {
     const next = nextChildren[index];
     const key = getNodeKey(next);
-    if (key !== undefined) nextKeys.add(key);
     const current = key === undefined ? undefined : keyedCurrent.get(key);
-    const patched = current ? patchNode(current, next) : next;
-    const reference = parent.childNodes[index] ?? null;
 
-    if (patched !== reference) parent.insertBefore(patched, reference);
+    if (current) {
+      sources[index] = currentChildren.indexOf(current);
+      patchedChildren[index] = patchNode(current, next);
+      matched++;
+      continue;
+    }
+
+    sources[index] = -1;
+    patchedChildren[index] = next;
   }
 
-  for (let index = currentChildren.length - 1; index >= 0; index--) {
-    const child = currentChildren[index];
-    const key = getNodeKey(child);
-    if ((key === undefined || !nextKeys.has(key)) && child.parentNode === parent) {
-      child.remove();
+  if (matched !== currentChildren.length) {
+    const retained = new Set<Node>(patchedChildren);
+
+    for (let index = currentChildren.length - 1; index >= 0; index--) {
+      const child = currentChildren[index];
+      if (!retained.has(child) && child.parentNode === parent) child.remove();
     }
   }
+
+  const stable = longestIncreasingSubsequence(sources);
+  let stableIndex = stable.length - 1;
+  let anchor: Node | null = null;
+
+  for (let index = patchedChildren.length - 1; index >= 0; index--) {
+    const child = patchedChildren[index];
+
+    if (sources[index] !== -1 && stableIndex >= 0 && stable[stableIndex] === index) {
+      stableIndex--;
+      anchor = child;
+      continue;
+    }
+
+    if (child.nextSibling !== anchor) parent.insertBefore(child, anchor);
+    anchor = child;
+  }
+}
+
+function longestIncreasingSubsequence(values: number[]): number[] {
+  const predecessors = new Array<number>(values.length);
+  const result: number[] = [];
+
+  for (let index = 0; index < values.length; index++) {
+    const value = values[index];
+    if (value === -1) continue;
+
+    let low = 0;
+    let high = result.length;
+
+    while (low < high) {
+      const middle = (low + high) >> 1;
+      if (values[result[middle]] < value) low = middle + 1;
+      else high = middle;
+    }
+
+    if (low > 0) predecessors[index] = result[low - 1];
+    result[low] = index;
+  }
+
+  let cursor = result[result.length - 1];
+  for (let index = result.length - 1; index >= 0; index--) {
+    result[index] = cursor;
+    cursor = predecessors[cursor];
+  }
+
+  return result;
 }
 
 function patchChildren(parent: Node, nextChildren: Node[]): void {
@@ -744,6 +853,25 @@ function patchChildren(parent: Node, nextChildren: Node[]): void {
   if (nextChildren.length === 0) {
     parent.textContent = '';
     return;
+  }
+
+  if (currentChildren.length === nextChildren.length) {
+    let sameKeys = true;
+
+    for (let index = 0; index < currentChildren.length; index++) {
+      const currentKey = getNodeKey(currentChildren[index]);
+      const nextKey = getNodeKey(nextChildren[index]);
+
+      if (currentKey !== nextKey) {
+        sameKeys = false;
+        break;
+      }
+    }
+
+    if (sameKeys) {
+      patchChildrenByIndex(parent, nextChildren);
+      return;
+    }
   }
 
   if (hasKeyedChildren(currentChildren) || hasKeyedChildren(nextChildren)) {
