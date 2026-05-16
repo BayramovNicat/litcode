@@ -1,6 +1,6 @@
 import type { Children, Component, View } from './types';
 
-const specialPropKeys = new Set(['children', 'dataset', 'style']);
+const specialPropKeys = new Set(['children', 'dataset', 'style', 'className']);
 
 function firstElement(view: View): Element | null {
   if (Array.isArray(view)) {
