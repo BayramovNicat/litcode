@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "node --import tsx --test tests/**/*.test.ts",
     "bench": "tsx benchmarks/dom.bench.ts",
+    "bench:browser": "tsx benchmarks/run-browser-bench.ts",
     "format": "prettier . --write",
     "format:check": "prettier . --check"
   },
