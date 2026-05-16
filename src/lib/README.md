@@ -3,23 +3,23 @@
 Tiny TypeScript-first frontend rendering primitives:
 
 ```ts
-import { $derived, $effect, $state, component, html, mount } from './lib'
+import { $derived, $effect, $state, component, html, mount } from './lib';
 
-const Button = component<{ label: string; onclick: () => void }>((props) => html`
-  <button onclick=${props.onclick}>${props.label}</button>
-`)
+const Button = component<{ label: string; onclick: () => void }>(
+  (props) => html` <button onclick=${props.onclick}>${props.label}</button> `,
+);
 
-const count = $state(0)
-const doubled = $derived(() => count.value * 2)
+const count = $state(0);
+const doubled = $derived(() => count.value * 2);
 
-const root = mount(html`${Button({ label: 'count', onclick: () => count.value++ })}`, app)
+const root = mount(html`${Button({ label: 'count', onclick: () => count.value++ })}`, app);
 
 $effect(() => {
   root.update(html`
     ${Button({ label: `count ${count.value}`, onclick: () => count.value++ })}
     <p>${doubled.value}</p>
-  `)
-})
+  `);
+});
 ```
 
 Runtime note: without a compiler, local expressions inside string attributes like
