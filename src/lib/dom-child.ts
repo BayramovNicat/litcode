@@ -1,19 +1,45 @@
 import { type ChildPart } from './template';
 import { isTemplateResult, normalize, findChildPartBefore, patchNodesBeforeMarker, resetChildPart } from './dom-internal';
-import { updateTemplateInstance } from './dom-template';
+import { updateTemplateInstance, destroyTemplateInstance } from './dom-template';
 import { updateRepeatChildPart } from './repeat';
 
 export function updateChildPart(part: ChildPart, value: unknown): void {
   if (isRepeatResult(value)) {
+    if (part.instance) {
+      destroyTemplateInstance(part.instance);
+      part.instance = undefined;
+    }
     updateRepeatChildPart(part, value as any);
     return;
   }
 
-  if (isPrimitiveChild(value) && updatePrimitiveChildPart(part, value)) return;
+  if (isPrimitiveChild(value) && updatePrimitiveChildPart(part, value)) {
+    if (part.instance) {
+      destroyTemplateInstance(part.instance);
+      part.instance = undefined;
+    }
+    if (part.repeat) {
+      for (let b = 0; b < part.repeat.blocks.length; b++) {
+        const block = part.repeat.blocks[b];
+        block.cleanup?.();
+        if (block.instance) destroyTemplateInstance(block.instance);
+      }
+      part.repeat = undefined;
+    }
+    return;
+  }
 
   if (part.instance && isTemplateResult(value) && part.instance.result.strings === value.strings) {
     updateTemplateInstance(part.instance, value);
     part.nodes = part.instance.nodes;
+    if (part.repeat) {
+      for (let b = 0; b < part.repeat.blocks.length; b++) {
+        const block = part.repeat.blocks[b];
+        block.cleanup?.();
+        if (block.instance) destroyTemplateInstance(block.instance);
+      }
+      part.repeat = undefined;
+    }
     return;
   }
 
@@ -24,6 +50,18 @@ export function updateChildPart(part: ChildPart, value: unknown): void {
   const instance = isTemplateResult(value)
     ? ((nodes as any).__litcodeInstance ?? findChildPartBefore(nodes, parent)?.instance)
     : undefined;
+
+  if (part.instance && part.instance !== instance) {
+    destroyTemplateInstance(part.instance);
+  }
+  
+  if (part.repeat) {
+    for (let b = 0; b < part.repeat.blocks.length; b++) {
+      const block = part.repeat.blocks[b];
+      block.cleanup?.();
+      if (block.instance) destroyTemplateInstance(block.instance);
+    }
+  }
 
   resetChildPart(part, patchNodesBeforeMarker(parent, part.nodes, nodes, part.marker), instance);
 }

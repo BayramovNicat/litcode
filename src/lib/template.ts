@@ -20,6 +20,7 @@ export type ChildPart = {
   nodes: Node[];
   instance?: TemplateInstance;
   repeat?: RepeatState;
+  cleanup?: () => void;
 };
 
 export type RepeatBlock = {
@@ -28,6 +29,7 @@ export type RepeatBlock = {
   index: number;
   nodes: Node[];
   instance?: TemplateInstance;
+  cleanup?: () => void;
 };
 
 export type RepeatState = {
@@ -40,6 +42,7 @@ export type AttributePart = {
   element: Element;
   name: string;
   value?: unknown;
+  cleanup?: () => void;
 };
 
 export type EventPart = {
@@ -47,12 +50,14 @@ export type EventPart = {
   index: number;
   element: Element;
   name: string;
+  cleanup?: () => void;
 };
 
 export type KeyPart = {
   kind: 'key';
   index: number;
   element: LitcodeElement;
+  cleanup?: () => void;
 };
 
 export type Part = ChildPart | AttributePart | EventPart | KeyPart;

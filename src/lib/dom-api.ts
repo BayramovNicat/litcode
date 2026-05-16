@@ -1,6 +1,6 @@
 import type { MountHandle, View, TemplateResult } from './types';
 import { isTemplateResult, normalize } from './dom-internal';
-import { updateTemplateInstance, instantiateTemplate } from './dom-template';
+import { updateTemplateInstance, instantiateTemplate, destroyTemplateInstance } from './dom-template';
 import { patchChildren } from './patch';
 
 export function render(view: View, target: ParentNode): MountHandle {
@@ -19,6 +19,10 @@ export function render(view: View, target: ParentNode): MountHandle {
         return;
       }
 
+      if (rootInstance) {
+        destroyTemplateInstance(rootInstance);
+      }
+
       if (isTemplateResult(next)) {
         const nextInstance = instantiateTemplate(next as TemplateResult);
         patchChildren(parent, nextInstance.nodes);
@@ -30,6 +34,7 @@ export function render(view: View, target: ParentNode): MountHandle {
       rootInstance = undefined;
     },
     destroy() {
+      if (rootInstance) destroyTemplateInstance(rootInstance);
       parent.replaceChildren();
       rootInstance = undefined;
     },

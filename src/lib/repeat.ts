@@ -1,6 +1,6 @@
 import { type ChildPart, type RepeatBlock } from './template';
 import { normalize, patchNodesBeforeMarker, instantiateRepeatBlock, isTemplateResult } from './dom-internal';
-import { updateTemplateInstance } from './dom-template';
+import { updateTemplateInstance, destroyTemplateInstance } from './dom-template';
 
 export function updateRepeatChildPart(part: ChildPart, value: any): void {
   const parent = part.marker.parentNode;
@@ -39,6 +39,7 @@ export function updateRepeatChildPart(part: ChildPart, value: any): void {
         current.item = item;
         current.index = index;
       } else {
+        if (current.instance) destroyTemplateInstance(current.instance);
         const nextNodes = normalize(rendered);
         current.nodes = patchNodesBeforeMarker(parent, current.nodes, nextNodes, part.marker);
         current.instance = isTemplateResult(rendered)
@@ -60,6 +61,8 @@ export function updateRepeatChildPart(part: ChildPart, value: any): void {
     const block = currentBlocks[index];
     if (retained.has(block)) continue;
 
+    block.cleanup?.();
+    if (block.instance) destroyTemplateInstance(block.instance);
     removeNodes(block.nodes);
   }
 

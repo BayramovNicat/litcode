@@ -17,6 +17,7 @@ import * as domHelpers from './dom-helpers';
 import * as domTemplateUtils from './dom-template-utils';
 import { updateChildPart } from './dom-child';
 import * as patch from './patch';
+import { $effect } from './runes';
 
 let templateCacheDocument: Document | undefined;
 
@@ -87,33 +88,111 @@ export function instantiateTemplate(result: TemplateResult): TemplateInstance {
 }
 
 export function updateTemplateInstance(instance: TemplateInstance, next: TemplateResult): void {
-  for (let index = 0; index < instance.parts.length; index++) {
-    const part = instance.parts[index];
-    const value = next.values[part.index];
+  const parts = instance.parts;
+  const values = next.values;
+
+  for (let index = 0; index < parts.length; index++) {
+    const part = parts[index];
+    const rawValue = values[part.index];
 
     if (part.kind === 'child') {
-      updateChildPart(part, value);
+      let isRuneVal = false;
+      let isReactiveFn = false;
+
+      if (rawValue !== null && rawValue !== undefined) {
+        if (typeof rawValue === 'object') {
+          if ((rawValue as any).__litcodeRune === true) isRuneVal = true;
+        } else if (typeof rawValue === 'function') {
+          isReactiveFn = true;
+        }
+      }
+
+      if (isRuneVal || isReactiveFn) {
+        if (!part.cleanup) {
+          part.cleanup = $effect(() => {
+            const resolvedValue = isRuneVal ? (rawValue as any).value : (rawValue as Function)();
+            updateChildPart(part as ChildPart, resolvedValue);
+          });
+        }
+      } else {
+        if (part.cleanup) {
+          part.cleanup();
+          part.cleanup = undefined;
+        }
+        updateChildPart(part as ChildPart, rawValue);
+      }
       continue;
     }
 
     if (part.kind === 'attribute') {
-      if (!Object.is((part as AttributePart).value, value)) {
-        setAttributeValue(part.element, (part as AttributePart).name, value);
-        (part as AttributePart).value = value;
+      let isRuneVal = false;
+      let isReactiveFn = false;
+
+      if (rawValue !== null && rawValue !== undefined) {
+        if (typeof rawValue === 'object') {
+          if ((rawValue as any).__litcodeRune === true) isRuneVal = true;
+        } else if (typeof rawValue === 'function') {
+          isReactiveFn = true;
+        }
+      }
+
+      if (isRuneVal || isReactiveFn) {
+        if (!part.cleanup) {
+          part.cleanup = $effect(() => {
+            const resolvedValue = isRuneVal ? (rawValue as any).value : (rawValue as Function)();
+            if (!Object.is((part as AttributePart).value, resolvedValue)) {
+              setAttributeValue(part.element, (part as AttributePart).name, resolvedValue);
+              (part as AttributePart).value = resolvedValue;
+            }
+          });
+        }
+      } else {
+        if (part.cleanup) {
+          part.cleanup();
+          part.cleanup = undefined;
+        }
+        if (!Object.is((part as AttributePart).value, rawValue)) {
+          setAttributeValue(part.element, (part as AttributePart).name, rawValue);
+          (part as AttributePart).value = rawValue;
+        }
       }
       continue;
     }
 
     if (part.kind === 'event') {
-      if (typeof value === 'function') patch.setEvent(part.element, (part as EventPart).name, value as EventListener);
+      if (part.cleanup) {
+        part.cleanup();
+        part.cleanup = undefined;
+      }
+      if (typeof rawValue === 'function') patch.setEvent(part.element, (part as EventPart).name, rawValue as EventListener);
       continue;
     }
 
-    (part.element as any).__litcodeKey = String(value);
+    (part.element as any).__litcodeKey = String(rawValue);
     part.element.removeAttribute('key');
   }
 
   instance.result = next;
+}
+
+export function destroyTemplateInstance(instance: TemplateInstance): void {
+  for (let index = 0; index < instance.parts.length; index++) {
+    const part = instance.parts[index];
+    part.cleanup?.();
+    part.cleanup = undefined;
+
+    if (part.kind === 'child') {
+      const childPart = part as ChildPart;
+      if (childPart.instance) destroyTemplateInstance(childPart.instance);
+      if (childPart.repeat) {
+        for (let b = 0; b < childPart.repeat.blocks.length; b++) {
+          const block = childPart.repeat.blocks[b];
+          block.cleanup?.();
+          if (block.instance) destroyTemplateInstance(block.instance);
+        }
+      }
+    }
+  }
 }
 
 function templateCacheKey(strings: TemplateStringsArray, values: readonly unknown[]): string {

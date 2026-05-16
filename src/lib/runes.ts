@@ -16,14 +16,20 @@ const track = (target: object) => {
 };
 
 export type Rune<T> = {
+  __litcodeRune: true;
   value: T;
   subscribe(subscriber: Subscriber): () => void;
 };
+
+export function isRune(value: unknown): value is Rune<unknown> {
+  return value != null && (value as any).__litcodeRune === true;
+}
 
 export function $state<T>(initial: T): Rune<T> {
   const target = { value: initial };
 
   return {
+    __litcodeRune: true,
     get value() {
       track(target);
       return target.value;
@@ -54,6 +60,7 @@ export function $derived<T>(compute: () => T): Rune<T> {
 
   recompute();
   return {
+    __litcodeRune: true,
     get value() {
       return state.value;
     },
@@ -64,17 +71,39 @@ export function $derived<T>(compute: () => T): Rune<T> {
   };
 }
 
+const effectQueue = new Set<() => void>();
+let isFlushing = false;
+
+function flushQueue() {
+  for (const execute of effectQueue) {
+    execute();
+  }
+  effectQueue.clear();
+  isFlushing = false;
+}
+
 export function $effect(run: () => void | (() => void)): () => void {
   let cleanup: void | (() => void);
 
-  const rerun = () => {
+  const queuedRerun = () => {
+    effectQueue.add(execute);
+    if (!isFlushing) {
+      isFlushing = true;
+      queueMicrotask(flushQueue);
+    }
+  };
+
+  const execute = () => {
     cleanup?.();
     const previous = currentObserver;
-    currentObserver = rerun;
+    currentObserver = queuedRerun;
     cleanup = run();
     currentObserver = previous;
   };
 
-  rerun();
-  return () => cleanup?.();
+  execute();
+  return () => {
+    effectQueue.delete(execute);
+    cleanup?.();
+  };
 }
