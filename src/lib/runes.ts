@@ -1,11 +1,17 @@
 type Subscriber = () => void;
 
 let currentObserver: Subscriber | undefined;
+let currentObserverSources: Set<object> | undefined;
 
 const dependencies = new WeakMap<object, Set<Subscriber>>();
+const observerDependencies = new WeakMap<Subscriber, Set<object>>();
 
 const notify = (target: object) => {
-  dependencies.get(target)?.forEach((subscriber) => subscriber());
+  const subscribers = dependencies.get(target);
+  if (!subscribers) return;
+
+  const pending = Array.from(subscribers);
+  for (let index = 0; index < pending.length; index++) pending[index]();
 };
 
 const track = (target: object) => {
@@ -13,7 +19,18 @@ const track = (target: object) => {
   let subscribers = dependencies.get(target);
   if (!subscribers) dependencies.set(target, (subscribers = new Set()));
   subscribers.add(currentObserver);
+  currentObserverSources?.add(target);
 };
+
+function cleanupObserver(observer: Subscriber): void {
+  const sources = observerDependencies.get(observer);
+  if (!sources) return;
+
+  sources.forEach((target) => {
+    dependencies.get(target)?.delete(observer);
+  });
+  sources.clear();
+}
 
 export type Rune<T> = {
   __litcodeRune: true;
@@ -22,7 +39,7 @@ export type Rune<T> = {
 };
 
 export function isRune(value: unknown): value is Rune<unknown> {
-  return value != null && (value as any).__litcodeRune === true;
+  return typeof value === 'object' && value !== null && (value as any).__litcodeRune === true;
 }
 
 export function $state<T>(initial: T): Rune<T> {
@@ -52,10 +69,19 @@ export function $derived<T>(compute: () => T): Rune<T> {
   const state = $state<T>(undefined as T);
 
   const recompute = () => {
+    cleanupObserver(recompute);
+    const sources = new Set<object>();
     const previous = currentObserver;
+    const previousSources = currentObserverSources;
     currentObserver = recompute;
-    state.value = compute();
-    currentObserver = previous;
+    currentObserverSources = sources;
+    try {
+      state.value = compute();
+    } finally {
+      observerDependencies.set(recompute, sources);
+      currentObserver = previous;
+      currentObserverSources = previousSources;
+    }
   };
 
   recompute();
@@ -75,17 +101,27 @@ const effectQueue = new Set<() => void>();
 let isFlushing = false;
 
 function flushQueue() {
-  for (const execute of effectQueue) {
-    execute();
-  }
+  const pending = Array.from(effectQueue);
   effectQueue.clear();
+
+  for (let index = 0; index < pending.length; index++) {
+    pending[index]();
+  }
+
   isFlushing = false;
+
+  if (effectQueue.size > 0) {
+    isFlushing = true;
+    queueMicrotask(flushQueue);
+  }
 }
 
 export function $effect(run: () => void | (() => void)): () => void {
   let cleanup: void | (() => void);
+  let disposed = false;
 
   const queuedRerun = () => {
+    if (disposed) return;
     effectQueue.add(execute);
     if (!isFlushing) {
       isFlushing = true;
@@ -94,16 +130,29 @@ export function $effect(run: () => void | (() => void)): () => void {
   };
 
   const execute = () => {
+    if (disposed) return;
+    cleanupObserver(queuedRerun);
+    const sources = new Set<object>();
     cleanup?.();
     const previous = currentObserver;
+    const previousSources = currentObserverSources;
     currentObserver = queuedRerun;
-    cleanup = run();
-    currentObserver = previous;
+    currentObserverSources = sources;
+    try {
+      cleanup = run();
+    } finally {
+      observerDependencies.set(queuedRerun, sources);
+      currentObserver = previous;
+      currentObserverSources = previousSources;
+    }
   };
 
   execute();
   return () => {
+    disposed = true;
     effectQueue.delete(execute);
+    cleanupObserver(queuedRerun);
     cleanup?.();
+    cleanup = undefined;
   };
 }

@@ -1,4 +1,5 @@
 import type { View, RepeatResult, TemplateResult } from './types';
+import type { Rune } from './runes';
 
 export type TemplateCacheEntry = {
   template: HTMLTemplateElement;
@@ -21,6 +22,7 @@ export type ChildPart = {
   instance?: TemplateInstance;
   repeat?: RepeatState;
   cleanup?: () => void;
+  source?: unknown;
 };
 
 export type RepeatBlock = {
@@ -43,6 +45,7 @@ export type AttributePart = {
   name: string;
   value?: unknown;
   cleanup?: () => void;
+  source?: unknown;
 };
 
 export type EventPart = {
@@ -51,6 +54,7 @@ export type EventPart = {
   element: Element;
   name: string;
   cleanup?: () => void;
+  source?: unknown;
 };
 
 export type KeyPart = {
@@ -58,6 +62,7 @@ export type KeyPart = {
   index: number;
   element: LitcodeElement;
   cleanup?: () => void;
+  source?: unknown;
 };
 
 export type Part = ChildPart | AttributePart | EventPart | KeyPart;
@@ -73,7 +78,8 @@ export type InstantiatedNodes = Node[] & {
   __litcodeInstance?: TemplateInstance;
 };
 
-export type TemplateValue = View | EventListener;
+export type ReactiveValue<T = unknown> = Rune<T> | (() => T);
+export type TemplateValue = View | EventListener | ReactiveValue<View>;
 
 export type LitcodeElement = Element & {
   __litcodeEvents?: Record<string, EventListener | undefined>;

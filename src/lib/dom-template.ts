@@ -90,6 +90,7 @@ export function instantiateTemplate(result: TemplateResult): TemplateInstance {
 export function updateTemplateInstance(instance: TemplateInstance, next: TemplateResult): void {
   const parts = instance.parts;
   const values = next.values;
+  const resultChanged = instance.result !== next;
 
   for (let index = 0; index < parts.length; index++) {
     const part = parts[index];
@@ -108,7 +109,10 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
       }
 
       if (isRuneVal || isReactiveFn) {
-        if (!part.cleanup) {
+        if (part.source !== rawValue || (resultChanged && isRuneVal)) {
+          part.cleanup?.();
+          part.cleanup = undefined;
+          part.source = rawValue;
           part.cleanup = $effect(() => {
             const resolvedValue = isRuneVal ? (rawValue as any).value : (rawValue as Function)();
             updateChildPart(part as ChildPart, resolvedValue);
@@ -119,6 +123,7 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
           part.cleanup();
           part.cleanup = undefined;
         }
+        part.source = undefined;
         updateChildPart(part as ChildPart, rawValue);
       }
       continue;
@@ -137,7 +142,10 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
       }
 
       if (isRuneVal || isReactiveFn) {
-        if (!part.cleanup) {
+        if (part.source !== rawValue || (resultChanged && isRuneVal)) {
+          part.cleanup?.();
+          part.cleanup = undefined;
+          part.source = rawValue;
           part.cleanup = $effect(() => {
             const resolvedValue = isRuneVal ? (rawValue as any).value : (rawValue as Function)();
             if (!Object.is((part as AttributePart).value, resolvedValue)) {
@@ -151,6 +159,7 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
           part.cleanup();
           part.cleanup = undefined;
         }
+        part.source = undefined;
         if (!Object.is((part as AttributePart).value, rawValue)) {
           setAttributeValue(part.element, (part as AttributePart).name, rawValue);
           (part as AttributePart).value = rawValue;
@@ -164,11 +173,13 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
         part.cleanup();
         part.cleanup = undefined;
       }
+      part.source = undefined;
       if (typeof rawValue === 'function') patch.setEvent(part.element, (part as EventPart).name, rawValue as EventListener);
       continue;
     }
 
     (part.element as any).__litcodeKey = String(rawValue);
+    part.source = undefined;
     part.element.removeAttribute('key');
   }
 
@@ -180,6 +191,7 @@ export function destroyTemplateInstance(instance: TemplateInstance): void {
     const part = instance.parts[index];
     part.cleanup?.();
     part.cleanup = undefined;
+    part.source = undefined;
 
     if (part.kind === 'child') {
       const childPart = part as ChildPart;

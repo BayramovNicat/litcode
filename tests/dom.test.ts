@@ -1,7 +1,7 @@
 import { JSDOM } from 'jsdom';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { html, mount, repeat } from '../src/lib/dom';
+import { $derived, $effect, $state, html, mount, repeat } from '../src/lib';
 
 function setupDom(): HTMLElement {
   const dom = new JSDOM('<!doctype html><div id="app"></div>', {
@@ -194,5 +194,108 @@ describe('dom patching', () => {
       nextItems.map((item) => item.textContent),
       ['c', 'a', 'b'],
     );
+  });
+
+  it('updates rune child parts without calling handle.update', async () => {
+    const app = setupDom();
+    const count = $state(0);
+
+    mount(html`<button>Count ${count}</button>`, app);
+
+    assert.equal(app.textContent, 'Count 0');
+
+    count.value = 1;
+    count.value = 2;
+
+    await Promise.resolve();
+
+    assert.equal(app.textContent, 'Count 2');
+  });
+
+  it('updates reactive attribute parts without calling handle.update', async () => {
+    const app = setupDom();
+    const value = $state('a');
+
+    mount(html`<input value=${value} />`, app);
+    const input = app.querySelector('input')!;
+
+    assert.equal(input.value, 'a');
+
+    value.value = 'ab';
+
+    await Promise.resolve();
+
+    assert.equal(app.querySelector('input'), input);
+    assert.equal(input.value, 'ab');
+  });
+
+  it('batches multiple synchronous state changes into one effect run', async () => {
+    const count = $state(0);
+    let runs = 0;
+
+    const stop = $effect(() => {
+      runs++;
+      count.value;
+    });
+
+    count.value = 1;
+    count.value = 2;
+    count.value = 3;
+
+    assert.equal(runs, 1);
+
+    await Promise.resolve();
+
+    assert.equal(runs, 2);
+    stop();
+  });
+
+  it('switches reactive part source when template is updated', async () => {
+    const app = setupDom();
+    const first = $state('first');
+    const second = $state('second');
+    const view = (value: unknown) => html`<p>${value}</p>`;
+    const handle = mount(view(first), app);
+
+    handle.update(view(second));
+
+    first.value = 'stale';
+    second.value = 'fresh';
+
+    await Promise.resolve();
+
+    assert.equal(app.textContent, 'fresh');
+  });
+
+  it('removes stale dependencies when effects rerun', async () => {
+    const useFirst = $state(true);
+    const first = $state('a');
+    const second = $state('b');
+    const value = $derived(() => (useFirst.value ? first.value : second.value));
+    const app = setupDom();
+
+    mount(html`<span>${value}</span>`, app);
+
+    useFirst.value = false;
+    await Promise.resolve();
+
+    first.value = 'stale';
+    second.value = 'fresh';
+    await Promise.resolve();
+
+    assert.equal(app.textContent, 'fresh');
+  });
+
+  it('cleans up reactive template parts on destroy', async () => {
+    const app = setupDom();
+    const count = $state(0);
+    const handle = mount(html`<span>${count}</span>`, app);
+
+    handle.destroy();
+    count.value = 1;
+
+    await Promise.resolve();
+
+    assert.equal(app.textContent, '');
   });
 });
