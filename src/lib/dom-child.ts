@@ -13,13 +13,14 @@ import {
 } from './dom-template';
 import { updateRepeatChildPart } from './repeat';
 
-function destroyRepeatBlocks(repeat: ChildPart['repeat']): void {
+function destroyRepeatBlocks(repeat: ChildPart['repeat'], removeDom = false): void {
   if (!repeat) return;
 
   for (let b = 0; b < repeat.blocks.length; b++) {
     const block = repeat.blocks[b];
     block.cleanup?.();
     if (block.instance) destroyTemplateInstance(block.instance);
+    if (removeDom) removeNodes(block.nodes);
   }
 }
 
@@ -37,28 +38,39 @@ function destroyTemplateArrayInstances(instances: TemplateInstance[] | undefined
 
 export function updateChildPart(part: ChildPart, value: unknown): void {
   if (isRepeatResult(value)) {
+    if (!part.repeat && part.nodes.length > 0) {
+      removeNodes(part.nodes);
+      part.nodes.length = 0;
+    }
     if (part.instance) {
       destroyTemplateInstance(part.instance);
       part.instance = undefined;
+    }
+    if (part.array) {
+      destroyTemplateArrayInstances(part.array.instances);
+      part.array = undefined;
     }
     updateRepeatChildPart(part, value as any);
     return;
   }
 
   const previousInstance = part.instance;
-  const previousRepeat = part.repeat;
   const previousArray = part.array?.instances;
+
+  if (part.repeat) {
+    destroyRepeatBlocks(part.repeat, true);
+    part.repeat = undefined;
+    part.nodes.length = 0;
+  }
 
   if (isPrimitiveChild(value) && updatePrimitiveChildPart(part, value)) {
     if (previousInstance) destroyTemplateInstance(previousInstance);
-    destroyRepeatBlocks(previousRepeat);
     destroyTemplateArrayInstances(previousArray);
     return;
   }
 
   if (updateTemplateArrayChildPart(part, value)) {
     if (previousInstance) destroyTemplateInstance(previousInstance);
-    destroyRepeatBlocks(previousRepeat);
     return;
   }
 
@@ -80,7 +92,6 @@ export function updateChildPart(part: ChildPart, value: unknown): void {
     : undefined;
 
   if (previousInstance && previousInstance !== instance) destroyTemplateInstance(previousInstance);
-  destroyRepeatBlocks(previousRepeat);
   destroyTemplateArrayInstances(previousArray);
 
   resetChildPart(part, patchNodesBeforeMarker(parent, part.nodes, nodes, part.marker), instance);
@@ -138,24 +149,6 @@ function updateTemplateArrayChildPart(part: ChildPart, value: unknown): boolean 
   part.array = { instances };
   part.repeat = undefined;
   return true;
-}
-
-function collectInstanceNodes(instances: TemplateInstance[]): Node[] {
-  let length = 0;
-  for (let index = 0; index < instances.length; index++) length += instances[index].nodes.length;
-
-  const nodes = new Array<Node>(length);
-  let offset = 0;
-
-  for (let index = 0; index < instances.length; index++) {
-    const instanceNodes = instances[index].nodes;
-
-    for (let nodeIndex = 0; nodeIndex < instanceNodes.length; nodeIndex++) {
-      nodes[offset++] = instanceNodes[nodeIndex];
-    }
-  }
-
-  return nodes;
 }
 
 export function updatePrimitiveChildPart(

@@ -258,6 +258,30 @@ describe('dom patching', () => {
     );
   });
 
+  it('switches repeated child parts to non-repeat views', () => {
+    const app = setupDom();
+    const view = (content: unknown) => html`<section>${content}</section>`;
+    const list = (items: string[]) =>
+      repeat(
+        items,
+        (item) => item,
+        (item) => html`<span>${item}</span>`,
+      );
+    const handle = mount(view(list(['a', 'b'])), app);
+
+    handle.update(view('done'));
+
+    assert.equal(app.querySelector('span'), null);
+    assert.equal(app.textContent, 'done');
+
+    handle.update(view(list(['c'])));
+
+    assert.deepEqual(
+      Array.from(app.querySelectorAll('span'), (item) => item.textContent),
+      ['c'],
+    );
+  });
+
   it('updates rune child parts without calling handle.update', async () => {
     const app = setupDom();
     const count = $state(0);

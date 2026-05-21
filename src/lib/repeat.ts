@@ -11,7 +11,7 @@ export function updateRepeatChildPart(part: ChildPart, value: any): void {
   const parent = part.marker.parentNode;
   if (!parent) return;
 
-  const currentBlocks: (RepeatBlock | null)[] = part.repeat?.blocks ? [...part.repeat.blocks] : [];
+  const currentBlocks = (part.repeat?.blocks ?? []) as (RepeatBlock | null)[];
   const oldLength = currentBlocks.length;
   const newLength = value.items.length;
 
@@ -98,6 +98,37 @@ export function updateRepeatChildPart(part: ChildPart, value: any): void {
       nodes[index].parentNode?.removeChild(nodes[index]);
     }
   };
+
+  if (oldLength === newLength && newLength > 16 && skipIndexCheck) {
+    let isExactReverse = true;
+
+    for (let index = 0; index < newLength; index++) {
+      const block = currentBlocks[oldLength - 1 - index];
+      if (
+        block === null ||
+        block.key !== newKeys[index] ||
+        !Object.is(block.item, value.items[index])
+      ) {
+        isExactReverse = false;
+        break;
+      }
+    }
+
+    if (isExactReverse) {
+      const fragment = document.createDocumentFragment();
+
+      for (let index = 0; index < newLength; index++) {
+        const block = currentBlocks[oldLength - 1 - index]!;
+        block.index = index;
+        nextBlocks[index] = block;
+        appendBlockNodes(fragment, block);
+      }
+
+      parent.insertBefore(fragment, part.marker);
+      commitRepeatPart(part, nextBlocks);
+      return;
+    }
+  }
 
   while (oldHead <= oldTail && newHead <= newTail) {
     const oldBlockHead = currentBlocks[oldHead];
@@ -206,32 +237,18 @@ export function updateRepeatChildPart(part: ChildPart, value: any): void {
     }
   }
 
-  // Collect all nodes to update the ChildPart's nodes
-  part.nodes = collectRepeatNodes(nextBlocks);
-  part.instance = undefined;
-  part.repeat = { blocks: nextBlocks };
+  commitRepeatPart(part, nextBlocks);
 }
 
-function collectRepeatNodes(blocks: RepeatBlock[]): Node[] {
-  let length = 0;
-  for (let index = 0; index < blocks.length; index++) {
-    if (blocks[index]) {
-      length += blocks[index].nodes.length;
-    }
-  }
+function appendBlockNodes(parent: Node, block: RepeatBlock): void {
+  const nodes = block.nodes;
 
-  const nodes = new Array<Node>(length);
-  let offset = 0;
+  for (let index = 0; index < nodes.length; index++) parent.appendChild(nodes[index]);
+}
 
-  for (let index = 0; index < blocks.length; index++) {
-    const block = blocks[index];
-    if (block) {
-      const blockNodes = block.nodes;
-      for (let nodeIndex = 0; nodeIndex < blockNodes.length; nodeIndex++) {
-        nodes[offset++] = blockNodes[nodeIndex];
-      }
-    }
-  }
-
-  return nodes;
+function commitRepeatPart(part: ChildPart, blocks: RepeatBlock[]): void {
+  part.nodes.length = 0;
+  part.instance = undefined;
+  part.array = undefined;
+  part.repeat = { blocks };
 }

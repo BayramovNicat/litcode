@@ -5,7 +5,7 @@ export function pathToNode(root: Node, path: number[]): Node | undefined {
   let node: Node | undefined = root;
 
   for (let index = 0; index < path.length; index++) {
-    let child = node.firstChild;
+    let child: ChildNode | null = node.firstChild;
     const targetIdx = path[index];
     for (let i = 0; i < targetIdx && child; i++) {
       child = child.nextSibling;
