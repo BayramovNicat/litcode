@@ -1,4 +1,12 @@
-import { component, html, mount, repeat, type View } from '../src/lib';
+import {
+  component,
+  html as lcHtml,
+  mount as lcMount,
+  repeat as lcRepeat,
+  type View,
+} from '../src/lib';
+import { html as litHtml, render as litRender } from 'lit-html';
+import { repeat as litRepeat } from 'lit-html/directives/repeat.js';
 
 type Bench = {
   name: string;
@@ -65,59 +73,83 @@ function print(result: BenchResult): void {
   const max = Math.max(...result.samples);
 
   console.log(
-    `${result.name.padEnd(32)} avg ${avg.toFixed(4)}ms  med ${med.toFixed(4)}ms  min ${min.toFixed(4)}ms  max ${max.toFixed(4)}ms`,
+    `${result.name.padEnd(36)} avg ${avg.toFixed(4)}ms  med ${med.toFixed(4)}ms  min ${min.toFixed(4)}ms  max ${max.toFixed(4)}ms`,
   );
 }
 
-function keyedListView(items: number[]): View {
-  return html`<ul>
-    ${items.map((item) => html`<li key="${item}">Item ${item}</li>`)}
+function lcKeyedListView(items: number[]): View {
+  return lcHtml`<ul>
+    ${items.map((item) => lcHtml`<li key="${item}">Item ${item}</li>`)}
   </ul>`;
 }
 
-function repeatedListView(items: number[]): View {
-  return html`<ul>
-    ${repeat(
+function lcRepeatedListView(items: number[]): View {
+  return lcHtml`<ul>
+    ${lcRepeat(
       items,
       (item) => item,
-      (item) => html`<li>Item ${item}</li>`,
+      (item) => lcHtml`<li>Item ${item}</li>`,
     )}
   </ul>`;
 }
 
-function unkeyedListView(offset: number): View {
-  return html`<ul>
-    ${Array.from({ length: 1_000 }, (_, index) => html`<li>Item ${index + offset}</li>`)}
+function lcUnkeyedListView(offset: number): View {
+  return lcHtml`<ul>
+    ${Array.from({ length: 1_000 }, (_, index) => lcHtml`<li>Item ${index + offset}</li>`)}
   </ul>`;
 }
 
+function litRepeatedListView(items: number[]) {
+  return litHtml`<ul>${litRepeat(
+    items,
+    (item) => item,
+    (item) => litHtml`<li>Item ${item}</li>`,
+  )}</ul>`;
+}
+
+function litUnkeyedListView(offset: number) {
+  return litHtml`<ul>${Array.from({ length: 1_000 }, (_, index) => litHtml`<li>Item ${index + offset}</li>`)}</ul>`;
+}
+
 const Passthrough = component<{ children: View }>(
-  ({ children }) => html`<section>${children}</section>`,
+  ({ children }) => lcHtml`<section>${children}</section>`,
 );
 const RootProp = component<{ className: string; children: View }>(
-  ({ children }) => html`<section>${children}</section>`,
+  ({ children }) => lcHtml`<section>${children}</section>`,
 );
 
 const benches: Bench[] = [
+  // 1. Text updates
   {
-    name: 'text update',
+    name: 'litcode text update',
     iterations: 20_000,
     setup(target) {
       let count = 0;
-      const handle = mount(html`<button>Count ${count}</button>`, target);
-      return () => handle.update(html`<button>Count ${++count}</button>`);
+      const handle = lcMount(lcHtml`<button>Count ${count}</button>`, target);
+      return () => handle.update(lcHtml`<button>Count ${++count}</button>`);
     },
   },
   {
-    name: 'attribute update',
+    name: 'lit-html text update',
+    iterations: 20_000,
+    setup(target) {
+      let count = 0;
+      litRender(litHtml`<button>Count ${count}</button>`, target);
+      return () => litRender(litHtml`<button>Count ${++count}</button>`, target);
+    },
+  },
+
+  // 2. Attribute updates
+  {
+    name: 'litcode attribute update',
     iterations: 20_000,
     setup(target) {
       let active = false;
       const view = () =>
-        html`<button class="${active ? 'active' : 'idle'}" data-state="${active ? 'on' : 'off'}">
+        lcHtml`<button class="${active ? 'active' : 'idle'}" data-state="${active ? 'on' : 'off'}">
           Go
         </button>`;
-      const handle = mount(view(), target);
+      const handle = lcMount(view(), target);
       return () => {
         active = !active;
         handle.update(view());
@@ -125,37 +157,171 @@ const benches: Bench[] = [
     },
   },
   {
-    name: 'event handler update',
+    name: 'lit-html attribute update',
+    iterations: 20_000,
+    setup(target) {
+      let active = false;
+      const view = () =>
+        litHtml`<button class=${active ? 'active' : 'idle'} data-state=${active ? 'on' : 'off'}>
+          Go
+        </button>`;
+      litRender(view(), target);
+      return () => {
+        active = !active;
+        litRender(view(), target);
+      };
+    },
+  },
+
+  // 3. Event handler updates
+  {
+    name: 'litcode event handler update',
     iterations: 20_000,
     setup(target) {
       let count = 0;
-      const view = () => html`<button onclick="${() => count++}">${count}</button>`;
-      const handle = mount(view(), target);
+      const view = () => lcHtml`<button onclick="${() => count++}">${count}</button>`;
+      const handle = lcMount(view(), target);
       return () => handle.update(view());
     },
   },
   {
-    name: 'controlled input',
+    name: 'lit-html event handler update',
+    iterations: 20_000,
+    setup(target) {
+      let count = 0;
+      const view = () => litHtml`<button @click=${() => count++}>${count}</button>`;
+      litRender(view(), target);
+      return () => litRender(view(), target);
+    },
+  },
+
+  // 4. Controlled input updates
+  {
+    name: 'litcode controlled input',
     iterations: 20_000,
     setup(target) {
       let value = 'a';
-      const handle = mount(html`<input value="${value}" />`, target);
+      const handle = lcMount(lcHtml`<input value="${value}" />`, target);
       return () => {
         value += 'b';
-        handle.update(html`<input value="${value}" />`);
+        handle.update(lcHtml`<input value="${value}" />`);
       };
     },
   },
   {
-    name: 'append/remove children',
+    name: 'lit-html controlled input',
+    iterations: 20_000,
+    setup(target) {
+      let value = 'a';
+      litRender(litHtml`<input .value=${value} />`, target);
+      return () => {
+        value += 'b';
+        litRender(litHtml`<input .value=${value} />`, target);
+      };
+    },
+  },
+
+  // 5. Repeat rotate 1k
+  {
+    name: 'litcode repeat rotate 1k',
+    iterations: 100,
+    warmup: 10,
+    setup(target) {
+      const items = Array.from({ length: 1_000 }, (_, index) => index);
+      const handle = lcMount(lcRepeatedListView(items), target);
+      let offset = 0;
+      return () => {
+        offset = (offset + 1) % items.length;
+        handle.update(lcRepeatedListView([...items.slice(offset), ...items.slice(0, offset)]));
+      };
+    },
+  },
+  {
+    name: 'lit-html repeat rotate 1k',
+    iterations: 100,
+    warmup: 10,
+    setup(target) {
+      const items = Array.from({ length: 1_000 }, (_, index) => index);
+      litRender(litRepeatedListView(items), target);
+      let offset = 0;
+      return () => {
+        offset = (offset + 1) % items.length;
+        litRender(litRepeatedListView([...items.slice(offset), ...items.slice(0, offset)]), target);
+      };
+    },
+  },
+
+  // 6. Repeat reverse 1k
+  {
+    name: 'litcode repeat reverse 1k',
+    iterations: 20,
+    warmup: 3,
+    setup(target) {
+      const items = Array.from({ length: 1_000 }, (_, index) => index);
+      const handle = lcMount(lcRepeatedListView(items), target);
+      const reversed = [...items].reverse();
+      let flipped = false;
+      return () => {
+        flipped = !flipped;
+        handle.update(lcRepeatedListView(flipped ? reversed : items));
+      };
+    },
+  },
+  {
+    name: 'lit-html repeat reverse 1k',
+    iterations: 20,
+    warmup: 3,
+    setup(target) {
+      const items = Array.from({ length: 1_000 }, (_, index) => index);
+      litRender(litRepeatedListView(items), target);
+      const reversed = [...items].reverse();
+      let flipped = false;
+      return () => {
+        flipped = !flipped;
+        litRender(litRepeatedListView(flipped ? reversed : items), target);
+      };
+    },
+  },
+
+  // 7. Unkeyed patch 1k
+  {
+    name: 'litcode unkeyed patch 1k',
+    iterations: 100,
+    warmup: 10,
+    setup(target) {
+      let offset = 0;
+      const handle = lcMount(lcUnkeyedListView(0), target);
+      return () => {
+        offset += 1_000;
+        handle.update(lcUnkeyedListView(offset));
+      };
+    },
+  },
+  {
+    name: 'lit-html unkeyed patch 1k',
+    iterations: 100,
+    warmup: 10,
+    setup(target) {
+      let offset = 0;
+      litRender(litUnkeyedListView(0), target);
+      return () => {
+        offset += 1_000;
+        litRender(litUnkeyedListView(offset), target);
+      };
+    },
+  },
+
+  // Extra litcode-only tests for completeness of litcode performance profiles
+  {
+    name: 'litcode append/remove children',
     iterations: 2_000,
     setup(target) {
       let expanded = false;
       const view = () =>
-        html`<ul>
-          ${Array.from({ length: expanded ? 100 : 50 }, (_, index) => html`<li>${index}</li>`)}
+        lcHtml`<ul>
+          ${Array.from({ length: expanded ? 100 : 50 }, (_, index) => lcHtml`<li>${index}</li>`)}
         </ul>`;
-      const handle = mount(view(), target);
+      const handle = lcMount(view(), target);
       return () => {
         expanded = !expanded;
         handle.update(view());
@@ -163,71 +329,43 @@ const benches: Bench[] = [
     },
   },
   {
-    name: 'keyed reorder 1k',
+    name: 'litcode keyed reorder 1k',
     iterations: 100,
     warmup: 10,
     setup(target) {
       const items = Array.from({ length: 1_000 }, (_, index) => index);
-      const handle = mount(keyedListView(items), target);
+      const handle = lcMount(lcKeyedListView(items), target);
       const reversed = [...items].reverse();
       let flipped = false;
       return () => {
         flipped = !flipped;
-        handle.update(keyedListView(flipped ? reversed : items));
+        handle.update(lcKeyedListView(flipped ? reversed : items));
       };
     },
   },
   {
-    name: 'keyed rotate 1k',
+    name: 'litcode keyed rotate 1k',
     iterations: 100,
     warmup: 10,
     setup(target) {
       const items = Array.from({ length: 1_000 }, (_, index) => index);
-      const handle = mount(keyedListView(items), target);
+      const handle = lcMount(lcKeyedListView(items), target);
       let offset = 0;
       return () => {
         offset = (offset + 1) % items.length;
-        handle.update(keyedListView([...items.slice(offset), ...items.slice(0, offset)]));
+        handle.update(lcKeyedListView([...items.slice(offset), ...items.slice(0, offset)]));
       };
     },
   },
   {
-    name: 'repeat rotate 1k',
-    iterations: 100,
-    warmup: 10,
-    setup(target) {
-      const items = Array.from({ length: 1_000 }, (_, index) => index);
-      const handle = mount(repeatedListView(items), target);
-      let offset = 0;
-      return () => {
-        offset = (offset + 1) % items.length;
-        handle.update(repeatedListView([...items.slice(offset), ...items.slice(0, offset)]));
-      };
-    },
-  },
-  {
-    name: 'repeat reverse 1k',
-    iterations: 20,
-    warmup: 3,
-    setup(target) {
-      const items = Array.from({ length: 1_000 }, (_, index) => index);
-      const handle = mount(repeatedListView(items), target);
-      const reversed = [...items].reverse();
-      let flipped = false;
-      return () => {
-        flipped = !flipped;
-        handle.update(repeatedListView(flipped ? reversed : items));
-      };
-    },
-  },
-  {
-    name: 'keyed replace 1k',
+    name: 'litcode keyed replace 1k',
     iterations: 100,
     warmup: 10,
     setup(target) {
       let offset = 0;
-      const view = () => keyedListView(Array.from({ length: 1_000 }, (_, index) => index + offset));
-      const handle = mount(view(), target);
+      const view = () =>
+        lcKeyedListView(Array.from({ length: 1_000 }, (_, index) => index + offset));
+      const handle = lcMount(view(), target);
       return () => {
         offset += 1_000;
         handle.update(view());
@@ -235,31 +373,18 @@ const benches: Bench[] = [
     },
   },
   {
-    name: 'unkeyed patch 1k',
-    iterations: 100,
-    warmup: 10,
-    setup(target) {
-      let offset = 0;
-      const handle = mount(unkeyedListView(0), target);
-      return () => {
-        offset += 1_000;
-        handle.update(unkeyedListView(offset));
-      };
-    },
-  },
-  {
-    name: 'nested template parts',
+    name: 'litcode nested template parts',
     iterations: 2_000,
     setup(target) {
       let count = 0;
-      const view = () => html`
+      const view = () => lcHtml`
         <main>
           <header><h1>${count}</h1></header>
           <section>
             ${Array.from(
               { length: 100 },
               (_, index) =>
-                html`<article>
+                lcHtml`<article>
                   <h2>${index}</h2>
                   <p>${count + index}</p>
                 </article>`,
@@ -267,7 +392,7 @@ const benches: Bench[] = [
           </section>
         </main>
       `;
-      const handle = mount(view(), target);
+      const handle = lcMount(view(), target);
       return () => {
         count++;
         handle.update(view());
@@ -275,12 +400,12 @@ const benches: Bench[] = [
     },
   },
   {
-    name: 'component passthrough',
+    name: 'litcode component passthrough',
     iterations: 20_000,
     setup(target) {
       let count = 0;
-      const view = () => Passthrough({ children: html`<button>${count}</button>` });
-      const handle = mount(view(), target);
+      const view = () => Passthrough({ children: lcHtml`<button>${count}</button>` });
+      const handle = lcMount(view(), target);
       return () => {
         count++;
         handle.update(view());
@@ -288,16 +413,16 @@ const benches: Bench[] = [
     },
   },
   {
-    name: 'component root props',
+    name: 'litcode component root props',
     iterations: 20_000,
     setup(target) {
       let count = 0;
       const view = () =>
         RootProp({
           className: count % 2 ? 'odd' : 'even',
-          children: html`<button>${count}</button>`,
+          children: lcHtml`<button>${count}</button>`,
         });
-      const handle = mount(view(), target);
+      const handle = lcMount(view(), target);
       return () => {
         count++;
         handle.update(view());

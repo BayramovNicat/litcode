@@ -11,9 +11,7 @@ export function updateRepeatChildPart(part: ChildPart, value: any): void {
   const parent = part.marker.parentNode;
   if (!parent) return;
 
-  const currentBlocks: (RepeatBlock | null)[] = part.repeat?.blocks
-    ? [...part.repeat.blocks]
-    : [];
+  const currentBlocks: (RepeatBlock | null)[] = part.repeat?.blocks ? [...part.repeat.blocks] : [];
   const oldLength = currentBlocks.length;
   const newLength = value.items.length;
 
@@ -41,7 +39,12 @@ export function updateRepeatChildPart(part: ChildPart, value: any): void {
       block.index = index;
       return;
     }
-    const localMarker = index + 1 < newLength ? (nextBlocks[index + 1] ? nextBlocks[index + 1].nodes[0] : part.marker) : part.marker;
+    const localMarker =
+      index + 1 < newLength
+        ? nextBlocks[index + 1]
+          ? nextBlocks[index + 1].nodes[0]
+          : part.marker
+        : part.marker;
     if (block.instance) {
       const rendered = value.render(item, index);
       if (isTemplateResult(rendered) && block.instance.result.strings === rendered.strings) {
