@@ -50,13 +50,13 @@ function App(): View {
         Todos (${remaining} task${remaining.value === 1 ? '' : 's'} left)
       </h1>
 
-      <form class="flex gap-2" onsubmit="${addTodo}">
+      <form class="flex gap-2" onsubmit=${addTodo}>
         <input
           name="todo"
           autocomplete="off"
           placeholder="Add a task"
-          oninput="${handleInput}"
-          value="${todoInput}"
+          oninput=${handleInput}
+          value=${todoInput}
           class="h-10 flex-1 rounded-md border border-input bg-background px-3 text-sm outline-none transition focus:border-ring focus:ring-3 focus:ring-ring/20"
         />
         <button
@@ -94,10 +94,10 @@ function App(): View {
               </label>
               <button
                 type="button"
-                onclick="${() => removeTodo(todo.id)}"
+                onclick=${() => removeTodo(todo.id)}
                 class="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition hover:bg-accent hover:text-accent-foreground"
               >
-                Remove
+                x
               </button>
             </li>
           `,
@@ -106,8 +106,8 @@ function App(): View {
 
       <button
         type="button"
-        disabled="${remaining.value === todos.value.length}"
-        onclick="${clearDone}"
+        disabled=${remaining.value === todos.value.length}
+        onclick=${clearDone}
         class="self-start rounded-md px-2 py-1 text-sm font-medium text-muted-foreground transition hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-40"
       >
         Clear completed
