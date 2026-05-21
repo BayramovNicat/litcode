@@ -10,7 +10,7 @@ type Photo = {
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('App root not found.');
 
-const PHOTO_COUNT = 480;
+const PHOTO_COUNT = 1000;
 const photos: Photo[] = Array.from({ length: PHOTO_COUNT }, (_, index) => ({
   id: index + 1,
   seed: crypto.randomUUID(),
@@ -22,7 +22,7 @@ function randomImageUrl(seed: string): string {
 
 function PhotoCard(photo: Photo): View {
   return html`
-    <article class="overflow-hidden rounded-md border border-border bg-card shadow-xs">
+    <article class="content-auto overflow-hidden rounded-md border border-border bg-card shadow-xs">
       <div class="aspect-3/2 bg-muted">
         ${Image({
           src: randomImageUrl(photo.seed),
