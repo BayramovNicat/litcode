@@ -83,10 +83,12 @@ variant helpers and their class-merging dependency.
 ```sh
 npm install
 npm run test
+npm run test:browser
 npm run build
 ```
 
 The library build outputs ESM JavaScript and TypeScript declarations to `dist/`.
+Browser tests run in headless Chrome. Set `CHROME_PATH` if Chrome is installed in a non-default location.
 
 ## Publish to npm
 

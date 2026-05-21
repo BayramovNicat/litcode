@@ -49,6 +49,8 @@
     "prepublishOnly": "npm run test && npm run build",
     "preview": "vite preview",
     "test": "node --import tsx --test tests/**/*.test.ts",
+    "test:all": "npm run test && npm run test:browser",
+    "test:browser": "tsx tests/run-browser-tests.ts",
     "bench": "tsx benchmarks/dom.bench.ts",
     "bench:lit-html": "tsx benchmarks/lit-html.bench.ts",
     "bench:browser": "tsx benchmarks/run-browser-bench.ts",
