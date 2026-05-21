@@ -46,6 +46,7 @@
     "dev": "vite",
     "build": "vite build && tsc -p tsconfig.build.json",
     "build:demo": "tsc && vite build --mode demo",
+    "vercel-build": "npm run build:demo",
     "prepublishOnly": "npm run test && npm run build",
     "preview": "vite preview",
     "size": "node scripts/size.mjs",
