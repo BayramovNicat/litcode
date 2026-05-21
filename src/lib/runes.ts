@@ -5,6 +5,10 @@ let currentObserverSources: Set<object> | undefined;
 
 const dependencies = new WeakMap<object, Set<Subscriber>>();
 const observerDependencies = new WeakMap<Subscriber, Set<object>>();
+const scheduleMicrotask =
+  typeof queueMicrotask === 'function'
+    ? queueMicrotask
+    : (callback: () => void) => void Promise.resolve().then(callback);
 
 const notify = (target: object) => {
   const subscribers = dependencies.get(target);
@@ -112,7 +116,7 @@ function flushQueue() {
 
   if (effectQueue.size > 0) {
     isFlushing = true;
-    queueMicrotask(flushQueue);
+    scheduleMicrotask(flushQueue);
   }
 }
 
@@ -125,7 +129,7 @@ export function $effect(run: () => void | (() => void)): () => void {
     effectQueue.add(execute);
     if (!isFlushing) {
       isFlushing = true;
-      queueMicrotask(flushQueue);
+      scheduleMicrotask(flushQueue);
     }
   };
 

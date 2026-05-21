@@ -140,12 +140,20 @@ function updateTemplateArrayChildPart(part: ChildPart, value: unknown): boolean 
 }
 
 function collectInstanceNodes(instances: TemplateInstance[]): Node[] {
-  const nodes: Node[] = [];
+  let length = 0;
+  for (let index = 0; index < instances.length; index++) length += instances[index].nodes.length;
+
+  const nodes = new Array<Node>(length);
+  let offset = 0;
+
   for (let index = 0; index < instances.length; index++) {
     const instanceNodes = instances[index].nodes;
-    for (let nodeIndex = 0; nodeIndex < instanceNodes.length; nodeIndex++)
-      nodes.push(instanceNodes[nodeIndex]);
+
+    for (let nodeIndex = 0; nodeIndex < instanceNodes.length; nodeIndex++) {
+      nodes[offset++] = instanceNodes[nodeIndex];
+    }
   }
+
   return nodes;
 }
 
@@ -168,7 +176,7 @@ export function updatePrimitiveChildPart(
   if (current?.nodeType === Node.TEXT_NODE) {
     if (current.textContent !== text) current.textContent = text;
 
-    if (part.nodes.length > 1) removeNodes(part.nodes.slice(1));
+    if (part.nodes.length > 1) removeNodes(part.nodes, 1);
 
     resetChildPart(part, [current]);
     return true;
@@ -194,8 +202,8 @@ export function isPrimitiveChild(
   );
 }
 
-function removeNodes(nodes: Node[]): void {
-  for (let index = 0; index < nodes.length; index++)
+function removeNodes(nodes: Node[], start = 0): void {
+  for (let index = start; index < nodes.length; index++)
     nodes[index].parentNode?.removeChild(nodes[index]);
 }
 

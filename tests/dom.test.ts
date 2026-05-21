@@ -67,7 +67,7 @@ describe('dom patching', () => {
   it('keeps one stable DOM event listener and updates handler', () => {
     const app = setupDom();
     const calls: string[] = [];
-    const handle = mount(html`<button onclick=${() => calls.push('first')}>Go</button>`, app);
+    const handle = mount(html`<button onclick="${() => calls.push('first')}">Go</button>`, app);
     const button = app.querySelector('button')!;
     const addEventListener = button.addEventListener.bind(button);
     let added = 0;
@@ -77,7 +77,7 @@ describe('dom patching', () => {
       return addEventListener(...args);
     }) as typeof button.addEventListener;
 
-    handle.update(html`<button onclick=${() => calls.push('second')}>Go</button>`);
+    handle.update(html`<button onclick="${() => calls.push('second')}">Go</button>`);
     button.click();
 
     assert.equal(app.querySelector('button'), button);
@@ -88,13 +88,38 @@ describe('dom patching', () => {
   it('removes event listeners when the event disappears', () => {
     const app = setupDom();
     let calls = 0;
-    const handle = mount(html`<button onclick=${() => calls++}>Go</button>`, app);
+    const handle = mount(html`<button onclick="${() => calls++}">Go</button>`, app);
     const button = app.querySelector('button')!;
 
     handle.update(html`<button>Go</button>`);
     button.click();
 
     assert.equal(calls, 0);
+  });
+
+  it('keeps event parts when the initial handler is missing', () => {
+    const app = setupDom();
+    let calls = 0;
+    const view = (handler?: () => void) => html`<button onclick="${handler}">Go</button>`;
+    const handle = mount(view(undefined), app);
+    const button = app.querySelector('button')!;
+
+    handle.update(view(() => calls++));
+    button.click();
+
+    assert.equal(calls, 1);
+    assert.equal(button.hasAttribute('onclick'), false);
+  });
+
+  it('rejects unquoted dynamic attributes and events', () => {
+    assert.throws(
+      () => mount(html`<button class=${'active'}>Go</button>`, setupDom()),
+      /Dynamic attribute "class" must be quoted/,
+    );
+    assert.throws(
+      () => mount(html`<button onclick=${() => undefined}>Go</button>`, setupDom()),
+      /Dynamic attribute "onclick" must be quoted/,
+    );
   });
 
   it('reorders keyed children without replacing nodes', () => {
@@ -195,7 +220,7 @@ describe('dom patching', () => {
 
   it('preserves focused component fragment inputs across root updates', () => {
     const app = setupDom();
-    const Input = (value: string) => html`<input value=${value} />`;
+    const Input = (value: string) => html`<input value="${value}" />`;
     const view = (value: string) => html`<div>${Input(value)}</div>`;
     const handle = mount(view('a'), app);
     const input = app.querySelector('input')!;
@@ -253,7 +278,7 @@ describe('dom patching', () => {
     const app = setupDom();
     const value = $state('a');
 
-    mount(html`<input value=${value} />`, app);
+    mount(html`<input value="${value}" />`, app);
     const input = app.querySelector('input')!;
 
     assert.equal(input.value, 'a');

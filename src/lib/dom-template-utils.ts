@@ -28,30 +28,37 @@ export function getNodePath(node: Node, root: Node): number[] {
 }
 
 export function applyKeys(root: ParentNode): void {
-  root.querySelectorAll(keySelector).forEach((element) => {
+  const elements = root.querySelectorAll(keySelector);
+
+  for (let index = 0; index < elements.length; index++) {
+    const element = elements[index];
     const key = element.getAttribute('key') ?? undefined;
 
     const target = element as LitcodeElement;
     target.__litcodeKey = key;
     element.removeAttribute('key');
-  });
+  }
 }
 
 export function createFragmentFromCache(cached: any): DocumentFragment {
   const fragment = cached.template.content.cloneNode(true) as DocumentFragment;
 
   if (cached.hasBooleanAttributes) {
-    fragment.querySelectorAll(booleanSelector).forEach((element: any) => {
-      booleanAttributes.forEach((attribute) => {
-        if (element.getAttribute(attribute) !== '') return;
+    const elements = fragment.querySelectorAll(booleanSelector);
+
+    for (let index = 0; index < elements.length; index++) {
+      const element = elements[index] as any;
+
+      for (const attribute of booleanAttributes) {
+        if (element.getAttribute(attribute) !== '') continue;
 
         if (attribute in element) {
           element[attribute] = true;
         }
 
         element.removeAttribute(attribute);
-      });
-    });
+      }
+    }
   }
 
   if (cached.hasKeys) applyKeys(fragment);

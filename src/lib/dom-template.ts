@@ -52,7 +52,7 @@ export function getTemplateCacheEntry(
 export function instantiateTemplate(result: TemplateResult): TemplateInstance {
   const cached = getTemplateCacheEntry(result.strings, result.values);
   const fragment = domTemplateUtils.createFragmentFromCache(cached);
-  const nodes = Array.from(fragment.childNodes);
+  const nodes = childNodesToArray(fragment);
   const parts: Part[] = [];
   const staticParts = getTemplateParts(cached, result);
 
@@ -186,6 +186,7 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
     if (part.kind === 'event') {
       const eventPart = part as EventPart;
       part.source = undefined;
+      eventPart.element.removeAttribute(`on${eventPart.name}`);
 
       if (eventPart.value === rawValue) continue;
 
@@ -266,11 +267,10 @@ function templateCacheKey(strings: TemplateStringsArray, values: readonly unknow
     if (index >= values.length) continue;
 
     const value = values[index];
-    const eventName =
-      typeof value === 'function' ? domHelpers.eventNameFromAttribute(part) : undefined;
+    const eventName = domHelpers.eventNameFromAttribute(part);
 
     if (eventName) {
-      source += domHelpers.markerAttributeValue(part, `${markerPrefix}${index}`);
+      source += domHelpers.markerAttributeValue(`${markerPrefix}${index}`);
       continue;
     }
 
@@ -279,11 +279,19 @@ function templateCacheKey(strings: TemplateStringsArray, values: readonly unknow
       : undefined;
 
     if (attributeName) {
-      source += domHelpers.markerAttributeValue(part, `${markerPrefix}${index}`);
+      source += domHelpers.markerAttributeValue(`${markerPrefix}${index}`);
       continue;
     }
 
     if (domHelpers.isInsideTag(source)) {
+      const unquotedAttributeName = domHelpers.unquotedAttributeNameFromAttribute(part);
+
+      if (unquotedAttributeName) {
+        throw new TypeError(
+          `Dynamic attribute "${unquotedAttributeName}" must be quoted. Use ${unquotedAttributeName}="\${value}" instead of ${unquotedAttributeName}=\${value}.`,
+        );
+      }
+
       source += domHelpers.escapeAttribute(value);
       continue;
     }
@@ -300,12 +308,9 @@ function getTemplateParts(cached: TemplateCacheEntry, result: TemplateResult): S
   const root = cached.template.content;
   const parts: StaticPart[] = [];
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
-  const comments: Comment[] = [];
 
-  while (walker.nextNode()) comments.push(walker.currentNode as Comment);
-
-  for (let commentIndex = 0; commentIndex < comments.length; commentIndex++) {
-    const comment = comments[commentIndex];
+  while (walker.nextNode()) {
+    const comment = walker.currentNode as Comment;
     const data = comment.data.trim();
     if (!data.startsWith(markerPrefix)) continue;
 
@@ -316,49 +321,76 @@ function getTemplateParts(cached: TemplateCacheEntry, result: TemplateResult): S
     });
   }
 
+  type AttributePartDescriptor =
+    | 'key'
+    | { kind: 'attribute'; name: string }
+    | { kind: 'event'; name: string };
+
+  const attributeParts = new Map<number, AttributePartDescriptor>();
+
   for (let index = 0; index < result.values.length; index++) {
     const previous = result.strings[index];
-    const eventName =
-      typeof result.values[index] === 'function'
-        ? domHelpers.eventNameFromAttribute(previous)
-        : undefined;
+    const eventName = domHelpers.eventNameFromAttribute(previous);
     const attributeName = domHelpers.isInsideTag(previous)
       ? domHelpers.attributeNameFromAttribute(previous)
       : undefined;
 
     if (eventName) {
-      root.querySelectorAll(`[on${eventName}="${markerPrefix}${index}"]`).forEach((element) => {
-        parts.push({
-          kind: 'event',
-          index,
-          path: domTemplateUtils.getNodePath(element, root),
-          name: eventName,
-        });
-      });
+      attributeParts.set(index, { kind: 'event', name: eventName });
       continue;
     }
 
     if (attributeName === 'key') {
-      root.querySelectorAll(`[key="${markerPrefix}${index}"]`).forEach((element) => {
-        parts.push({ kind: 'key', index, path: domTemplateUtils.getNodePath(element, root) });
-      });
+      attributeParts.set(index, 'key');
       continue;
     }
 
     if (attributeName) {
-      root.querySelectorAll(`[${attributeName}="${markerPrefix}${index}"]`).forEach((element) => {
+      attributeParts.set(index, { kind: 'attribute', name: attributeName });
+    }
+  }
+
+  if (attributeParts.size > 0) {
+    const elementWalker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+
+    while (elementWalker.nextNode()) {
+      const element = elementWalker.currentNode as Element;
+      const attributes = element.attributes;
+      let path: number[] | undefined;
+
+      for (let attrIndex = 0; attrIndex < attributes.length; attrIndex++) {
+        const markerIndex = markerIndexFromAttributeValue(attributes[attrIndex].value);
+        if (markerIndex === undefined) continue;
+
+        const part = attributeParts.get(markerIndex);
+        if (!part) continue;
+
+        path ??= domTemplateUtils.getNodePath(element, root);
+
+        if (part === 'key') {
+          parts.push({ kind: 'key', index: markerIndex, path });
+          continue;
+        }
+
         parts.push({
-          kind: 'attribute',
-          index,
-          path: domTemplateUtils.getNodePath(element, root),
-          name: attributeName,
+          kind: part.kind,
+          index: markerIndex,
+          path,
+          name: part.name,
         });
-      });
+      }
     }
   }
 
   cached.dynamicParts = parts;
   return parts;
+}
+
+function markerIndexFromAttributeValue(value: string): number | undefined {
+  if (!value.startsWith(markerPrefix)) return undefined;
+
+  const index = Number(value.slice(markerPrefix.length));
+  return Number.isInteger(index) ? index : undefined;
 }
 
 function setAttributeValue(element: Element, name: string, value: unknown): void {
@@ -376,4 +408,13 @@ function setAttributeValue(element: Element, name: string, value: unknown): void
   if (booleanAttributes.has(name) && name in element) {
     (element as unknown as Record<string, boolean>)[name] = true;
   }
+}
+
+function childNodesToArray(parent: Node): Node[] {
+  const childNodes = parent.childNodes;
+  const nodes = new Array<Node>(childNodes.length);
+
+  for (let index = 0; index < childNodes.length; index++) nodes[index] = childNodes[index];
+
+  return nodes;
 }

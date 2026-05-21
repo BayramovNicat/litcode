@@ -25,15 +25,19 @@ export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
-export function tv<TVariants extends VariantDefinition>(config: TvConfig<TVariants>): TvFactory<TVariants> {
+export function tv<TVariants extends VariantDefinition>(
+  config: TvConfig<TVariants>,
+): TvFactory<TVariants> {
   const variants = config.variants ?? ({} as TVariants);
+  const variantEntries = Object.entries(variants);
 
   const factory = (
     props: VariantSelection<TVariants> & { class?: ClassValue; className?: ClassValue } = {},
   ) => {
     const pieces: ClassValue[] = [config.base];
 
-    for (const [name, options] of Object.entries(variants)) {
+    for (let index = 0; index < variantEntries.length; index++) {
+      const [name, options] = variantEntries[index];
       const selected =
         props[name as keyof TVariants] ?? config.defaultVariants?.[name as keyof TVariants];
       if (!selected) continue;

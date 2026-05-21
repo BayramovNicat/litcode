@@ -13,42 +13,50 @@ export function updateRepeatChildPart(part: ChildPart, value: any): void {
 
   const currentBlocks = part.repeat?.blocks ?? [];
   const keyedCurrent = new Map<string, RepeatBlock>();
-  const currentIndexes = new Map<RepeatBlock, number>();
 
   for (let index = 0; index < currentBlocks.length; index++) {
     const block = currentBlocks[index];
     if (!keyedCurrent.has(block.key)) keyedCurrent.set(block.key, block);
-    currentIndexes.set(block, index);
   }
 
-  const nextBlocks: RepeatBlock[] = new Array(value.items.length);
-  const sources = new Array<number>(value.items.length);
+  const length = value.items.length;
+  const nextBlocks: RepeatBlock[] = new Array(length);
+  const sources = new Array<number>(length);
   const retained = new Set<RepeatBlock>();
 
-  for (let index = 0; index < value.items.length; index++) {
+  for (let index = 0; index < length; index++) {
     const item = value.items[index];
     const key = String(value.key(item, index));
     const current = keyedCurrent.get(key);
-    const rendered = value.render(item, index);
 
     if (current) {
       retained.add(current);
-      sources[index] = currentIndexes.get(current) ?? -1;
+      sources[index] = current.index;
 
       if (Object.is(current.item, item) && current.index === index) {
         current.item = item;
         current.index = index;
-      } else if (
-        current.instance &&
-        isTemplateResult(rendered) &&
-        current.instance.result.strings === rendered.strings
-      ) {
-        updateTemplateInstance(current.instance, rendered);
-        current.nodes = current.instance.nodes;
-        current.item = item;
-        current.index = index;
+      } else if (current.instance) {
+        const rendered = value.render(item, index);
+
+        if (isTemplateResult(rendered) && current.instance.result.strings === rendered.strings) {
+          updateTemplateInstance(current.instance, rendered);
+          current.nodes = current.instance.nodes;
+          current.item = item;
+          current.index = index;
+        } else {
+          destroyTemplateInstance(current.instance);
+          current.instance = undefined;
+          const nextNodes = normalize(rendered);
+          current.nodes = patchNodesBeforeMarker(parent, current.nodes, nextNodes, part.marker);
+          current.instance = isTemplateResult(rendered)
+            ? (nextNodes as any).__litcodeInstance
+            : undefined;
+          current.item = item;
+          current.index = index;
+        }
       } else {
-        if (current.instance) destroyTemplateInstance(current.instance);
+        const rendered = value.render(item, index);
         const nextNodes = normalize(rendered);
         current.nodes = patchNodesBeforeMarker(parent, current.nodes, nextNodes, part.marker);
         current.instance = isTemplateResult(rendered)
@@ -62,6 +70,7 @@ export function updateRepeatChildPart(part: ChildPart, value: any): void {
       continue;
     }
 
+    const rendered = value.render(item, index);
     sources[index] = -1;
     nextBlocks[index] = instantiateRepeatBlock(rendered, key, item, index);
   }
@@ -123,9 +132,19 @@ export function moveRepeatBlocks(
 }
 
 export function collectRepeatNodes(blocks: RepeatBlock[]): Node[] {
-  const nodes: Node[] = [];
+  let length = 0;
+  for (let index = 0; index < blocks.length; index++) length += blocks[index].nodes.length;
 
-  for (let index = 0; index < blocks.length; index++) pushNodes(nodes, blocks[index].nodes);
+  const nodes = new Array<Node>(length);
+  let offset = 0;
+
+  for (let index = 0; index < blocks.length; index++) {
+    const blockNodes = blocks[index].nodes;
+
+    for (let nodeIndex = 0; nodeIndex < blockNodes.length; nodeIndex++) {
+      nodes[offset++] = blockNodes[nodeIndex];
+    }
+  }
 
   return nodes;
 }
@@ -133,10 +152,6 @@ export function collectRepeatNodes(blocks: RepeatBlock[]): Node[] {
 export function removeNodes(nodes: Node[]): void {
   for (let index = 0; index < nodes.length; index++)
     nodes[index].parentNode?.removeChild(nodes[index]);
-}
-
-function pushNodes(target: Node[], nodes: Node[]): void {
-  for (let index = 0; index < nodes.length; index++) target.push(nodes[index]);
 }
 
 function appendNodes(target: Node, nodes: Node[]): void {

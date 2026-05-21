@@ -43,7 +43,7 @@ export function normalize(view: View): Node[] {
   }
   if (isRepeatResult(view)) return normalizeRepeat(view);
   if (isFragment(view)) {
-    return Array.from(view.childNodes);
+    return childNodesToArray(view);
   }
   if (isNode(view)) return [view];
   return [document.createTextNode(String(view))];
@@ -114,7 +114,7 @@ export function patchNodesBeforeMarker(
 export function findChildPartBefore(nodes: Node[], fallbackParent: Node): ChildPart | undefined {
   const first = nodes[0];
   const previous = first ? first.previousSibling : fallbackParent.lastChild;
-  return previous instanceof Comment && (previous as any).__litcodePart
+  return previous?.nodeType === Node.COMMENT_NODE && (previous as any).__litcodePart
     ? (previous as any).__litcodePart
     : undefined;
 }
@@ -124,4 +124,13 @@ export function resetChildPart(part: ChildPart, nodes: Node[], instance?: any): 
   part.instance = instance;
   part.array = undefined;
   part.repeat = undefined;
+}
+
+function childNodesToArray(parent: Node): Node[] {
+  const childNodes = parent.childNodes;
+  const nodes = new Array<Node>(childNodes.length);
+
+  for (let index = 0; index < childNodes.length; index++) nodes[index] = childNodes[index];
+
+  return nodes;
 }

@@ -10,7 +10,7 @@ import { patchChildren } from './patch';
 export function render(view: View, target: ParentNode): MountHandle {
   const parent = target as unknown as HTMLElement;
   let rootInstance = isTemplateResult(view) ? instantiateTemplate(view) : undefined;
-  parent.replaceChildren(rootInstance ? rootInstance.fragment : makeFragment(view));
+  replaceChildren(parent, rootInstance ? rootInstance.fragment : makeFragment(view));
 
   return {
     update(next) {
@@ -34,12 +34,12 @@ export function render(view: View, target: ParentNode): MountHandle {
         return;
       }
 
-      patchChildren(parent, Array.from(makeFragment(next).childNodes));
+      patchChildren(parent, childNodesToArray(makeFragment(next)));
       rootInstance = undefined;
     },
     destroy() {
       if (rootInstance) destroyTemplateInstance(rootInstance);
-      parent.replaceChildren();
+      clearChildren(parent);
       rootInstance = undefined;
     },
   };
@@ -65,4 +65,22 @@ export function append(parent: Node, view: View) {
 
 function appendNodes(target: Node, nodes: Node[]): void {
   for (let index = 0; index < nodes.length; index++) target.appendChild(nodes[index]);
+}
+
+function replaceChildren(parent: Node, node: Node): void {
+  clearChildren(parent);
+  parent.appendChild(node);
+}
+
+function clearChildren(parent: Node): void {
+  while (parent.firstChild) parent.removeChild(parent.firstChild);
+}
+
+function childNodesToArray(parent: Node): Node[] {
+  const childNodes = parent.childNodes;
+  const nodes = new Array<Node>(childNodes.length);
+
+  for (let index = 0; index < childNodes.length; index++) nodes[index] = childNodes[index];
+
+  return nodes;
 }

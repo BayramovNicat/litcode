@@ -20,7 +20,7 @@ npx jsr add @holmityd/litcode
 import { $derived, $effect, $state, component, html, mount } from '@holmityd/litcode';
 
 const Button = component<{ label: string; onclick: () => void }>((props) => {
-  return html`<button onclick=${props.onclick}>${props.label}</button>`;
+  return html`<button onclick="${props.onclick}">${props.label}</button>`;
 });
 
 const count = $state(0);
@@ -42,8 +42,12 @@ $effect(() => {
 Event handlers are passed as typed values:
 
 ```ts
-html`<button onclick=${() => console.log('clicked')}>Click</button>`;
+html`<button onclick="${() => console.log('clicked')}">Click</button>`;
 ```
+
+Dynamic attributes and events must use quoted interpolation, for example
+`class="${value}"`. Unquoted `class=${value}` and `onclick=${handler}` forms are
+intentionally rejected.
 
 ## API
 
@@ -62,6 +66,9 @@ import {
   tv,
 } from '@holmityd/litcode';
 ```
+
+For renderer-only bundles, import from `@holmityd/litcode/core` to avoid loading the
+variant helpers and their class-merging dependency.
 
 - `html` creates a template view from a tagged template literal.
 - `mount` renders a view into a DOM element and returns an update handle.

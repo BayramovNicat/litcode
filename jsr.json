@@ -2,15 +2,13 @@
   "name": "@holmityd/litcode",
   "version": "0.1.0",
   "license": "MIT",
-  "exports": "./mod.ts",
+  "exports": {
+    ".": "./mod.ts",
+    "./core": "./src/lib/core.ts",
+    "./variants": "./src/lib/variants.ts"
+  },
   "publish": {
-    "include": [
-      "README.md",
-      "mod.ts",
-      "src/lib/**/*.ts"
-    ],
-    "exclude": [
-      "src/lib/README.md"
-    ]
+    "include": ["README.md", "mod.ts", "src/lib/**/*.ts"],
+    "exclude": ["src/lib/README.md"]
   }
 }

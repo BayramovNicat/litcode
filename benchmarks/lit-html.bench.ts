@@ -137,7 +137,7 @@ const benches: Bench[] = [
       const app = setupDom();
       let active = false;
       const view = () =>
-        lcHtml`<button class=${active ? 'active' : 'idle'} data-state=${active ? 'on' : 'off'}>Go</button>`;
+        lcHtml`<button class="${active ? 'active' : 'idle'}" data-state="${active ? 'on' : 'off'}">Go</button>`;
       const handle = lcMount(view(), app);
       return () => {
         active = !active;
@@ -166,7 +166,7 @@ const benches: Bench[] = [
     setup() {
       const app = setupDom();
       let count = 0;
-      const view = () => lcHtml`<button onclick=${() => count++}>${count}</button>`;
+      const view = () => lcHtml`<button onclick="${() => count++}">${count}</button>`;
       const handle = lcMount(view(), app);
       return () => handle.update(view());
     },
@@ -188,10 +188,10 @@ const benches: Bench[] = [
     setup() {
       const app = setupDom();
       let value = 'a';
-      const handle = lcMount(lcHtml`<input value=${value} />`, app);
+      const handle = lcMount(lcHtml`<input value="${value}" />`, app);
       return () => {
         value += 'b';
-        handle.update(lcHtml`<input value=${value} />`);
+        handle.update(lcHtml`<input value="${value}" />`);
       };
     },
   },

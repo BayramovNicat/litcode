@@ -71,7 +71,7 @@ function print(result: BenchResult): void {
 
 function keyedListView(items: number[]): View {
   return html`<ul>
-    ${items.map((item) => html`<li key=${item}>Item ${item}</li>`)}
+    ${items.map((item) => html`<li key="${item}">Item ${item}</li>`)}
   </ul>`;
 }
 
@@ -114,7 +114,7 @@ const benches: Bench[] = [
     setup(target) {
       let active = false;
       const view = () =>
-        html`<button class=${active ? 'active' : 'idle'} data-state=${active ? 'on' : 'off'}>
+        html`<button class="${active ? 'active' : 'idle'}" data-state="${active ? 'on' : 'off'}">
           Go
         </button>`;
       const handle = mount(view(), target);
@@ -129,7 +129,7 @@ const benches: Bench[] = [
     iterations: 20_000,
     setup(target) {
       let count = 0;
-      const view = () => html`<button onclick=${() => count++}>${count}</button>`;
+      const view = () => html`<button onclick="${() => count++}">${count}</button>`;
       const handle = mount(view(), target);
       return () => handle.update(view());
     },
@@ -139,10 +139,10 @@ const benches: Bench[] = [
     iterations: 20_000,
     setup(target) {
       let value = 'a';
-      const handle = mount(html`<input value=${value} />`, target);
+      const handle = mount(html`<input value="${value}" />`, target);
       return () => {
         value += 'b';
-        handle.update(html`<input value=${value} />`);
+        handle.update(html`<input value="${value}" />`);
       };
     },
   },

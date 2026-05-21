@@ -6,7 +6,7 @@ Tiny TypeScript-first frontend rendering primitives:
 import { $derived, $effect, $state, component, html, mount } from './lib';
 
 const Button = component<{ label: string; onclick: () => void }>(
-  (props) => html` <button onclick=${props.onclick}>${props.label}</button> `,
+  (props) => html` <button onclick="${props.onclick}">${props.label}</button> `,
 );
 
 const count = $state(0);
@@ -22,6 +22,7 @@ $effect(() => {
 });
 ```
 
-Runtime note: without a compiler, local expressions inside string attributes like
-`onclick="count + 1"` cannot safely close over TypeScript variables. Use typed event
-bindings instead: `onclick=${() => count.value++}`.
+Runtime note: without a compiler, browser-style string handlers like
+`onclick="count + 1"` cannot safely close over TypeScript variables. Interpolate typed
+values instead: `onclick="${() => count.value++}"`. Dynamic attribute/event
+interpolations must be quoted.

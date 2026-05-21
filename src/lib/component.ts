@@ -8,6 +8,7 @@ import {
 } from './types';
 
 const specialPropKeySet = new Set([...specialPropKeys, 'className']);
+const hasOwn = Object.prototype.hasOwnProperty;
 
 function isTemplateResult(view: View): view is TemplateResult {
   return !!view && typeof view === 'object' && '__litcodeTemplate' in view;
@@ -46,11 +47,12 @@ function applyProps(element: Element, props: object): void {
     style?: string;
   };
 
-  for (const [key, value] of Object.entries(props)) {
+  for (const key in props) {
+    if (!hasOwn.call(props, key)) continue;
     if (specialPropKeySet.has(key)) continue;
     if (!(key in target)) continue;
 
-    target[key] = value;
+    target[key] = (props as Record<string, unknown>)[key];
   }
 
   if (dataset) Object.assign(target.dataset, dataset);
@@ -58,7 +60,11 @@ function applyProps(element: Element, props: object): void {
 }
 
 function hasRootProps(props: object): boolean {
-  return Object.keys(props).some((key) => key !== 'children' && key !== 'className');
+  for (const key in props) {
+    if (hasOwn.call(props, key) && key !== 'children' && key !== 'className') return true;
+  }
+
+  return false;
 }
 
 export function component(render: () => View): Component;

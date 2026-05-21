@@ -1,5 +1,7 @@
 import { type LitcodeElement } from './template';
 
+const hasOwn = Object.prototype.hasOwnProperty;
+
 export function sameNodeType(current: Node, next: Node): boolean {
   if (current.nodeType !== next.nodeType) return false;
 
@@ -50,11 +52,14 @@ export function patchEvents(current: Element, next: Element): void {
   const currentEvents = currentElement.__litcodeEvents ?? {};
   const nextEvents = nextElement.__litcodeEvents ?? {};
 
-  for (const name of Object.keys(currentEvents)) {
+  for (const name in currentEvents) {
+    if (!hasOwn.call(currentEvents, name)) continue;
     if (!nextEvents[name]) removeEvent(current, name);
   }
 
-  for (const [name, handler] of Object.entries(nextEvents)) {
+  for (const name in nextEvents) {
+    if (!hasOwn.call(nextEvents, name)) continue;
+    const handler = nextEvents[name];
     if (handler) setEvent(current, name, handler);
   }
 }
@@ -182,12 +187,13 @@ export function patchChildrenByIndex(parent: Node, nextChildren: Node[]): void {
   }
 
   for (let index = currentLength - 1; index >= nextLength; index--) {
-    parent.childNodes[index]?.remove();
+    const child = parent.childNodes[index];
+    if (child) parent.removeChild(child);
   }
 }
 
 export function patchKeyedChildren(parent: Node, nextChildren: Node[]): void {
-  const currentChildren = Array.from(parent.childNodes);
+  const currentChildren = childNodesToArray(parent);
   const keyedCurrent = new Map<string, Node>();
   const unkeyedCurrent: Node[] = [];
 
@@ -236,12 +242,12 @@ export function patchKeyedChildren(parent: Node, nextChildren: Node[]): void {
 
   for (let index = 0; index < currentChildren.length; index++) {
     const child = currentChildren[index];
-    if (!usedCurrent.has(child) && child.parentNode === parent) child.remove();
+    if (!usedCurrent.has(child) && child.parentNode === parent) parent.removeChild(child);
   }
 }
 
 export function patchFullyKeyedChildren(parent: Node, nextChildren: Node[]): void {
-  const currentChildren = Array.from(parent.childNodes);
+  const currentChildren = childNodesToArray(parent);
   const keyedCurrent = new Map<string, Node>();
   const currentIndexes = new Map<Node, number>();
   const sources = new Array<number>(nextChildren.length);
@@ -276,7 +282,7 @@ export function patchFullyKeyedChildren(parent: Node, nextChildren: Node[]): voi
 
     for (let index = currentChildren.length - 1; index >= 0; index--) {
       const child = currentChildren[index];
-      if (!retained.has(child) && child.parentNode === parent) child.remove();
+      if (!retained.has(child) && child.parentNode === parent) parent.removeChild(child);
     }
   }
 
@@ -329,7 +335,7 @@ export function longestIncreasingSubsequence(values: number[]): number[] {
 }
 
 export function patchChildren(parent: Node, nextChildren: Node[]): void {
-  const currentChildren = Array.from(parent.childNodes);
+  const currentChildren = childNodesToArray(parent);
 
   if (currentChildren.length === 0) {
     appendNodes(parent, nextChildren);
@@ -382,7 +388,7 @@ export function patchElement(current: Element, next: Element): void {
   (current as LitcodeElement).__litcodeKey = (next as LitcodeElement).__litcodeKey;
   patchAttributes(current, next);
   patchEvents(current, next);
-  if (!patchElementTextChildren(current, next)) patchChildren(current, Array.from(next.childNodes));
+  if (!patchElementTextChildren(current, next)) patchChildren(current, childNodesToArray(next));
   patchFormProperties(current, next);
 }
 
@@ -406,4 +412,13 @@ export function patchNode(current: Node, next: Node): Node {
 
 function appendNodes(target: Node, nodes: Node[]): void {
   for (let index = 0; index < nodes.length; index++) target.appendChild(nodes[index]);
+}
+
+function childNodesToArray(parent: Node): Node[] {
+  const childNodes = parent.childNodes;
+  const nodes = new Array<Node>(childNodes.length);
+
+  for (let index = 0; index < childNodes.length; index++) nodes[index] = childNodes[index];
+
+  return nodes;
 }
