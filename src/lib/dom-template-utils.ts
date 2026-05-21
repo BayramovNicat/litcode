@@ -1,5 +1,5 @@
 import { type LitcodeElement, keySelector } from './template';
-import { booleanAttributes, booleanSelector } from './template';
+import { booleanAttributeNames, booleanSelector } from './template';
 
 export function pathToNode(root: Node, path: number[]): Node | undefined {
   let node: Node | undefined = root;
@@ -60,7 +60,8 @@ export function createFragmentFromCache(cached: any): DocumentFragment {
     for (let index = 0; index < elements.length; index++) {
       const element = elements[index] as any;
 
-      for (const attribute of booleanAttributes) {
+      for (let attrIndex = 0; attrIndex < booleanAttributeNames.length; attrIndex++) {
+        const attribute = booleanAttributeNames[attrIndex];
         if (element.getAttribute(attribute) !== '') continue;
 
         if (attribute in element) {

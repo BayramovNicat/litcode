@@ -48,6 +48,8 @@
     "build:demo": "tsc && vite build --mode demo",
     "prepublishOnly": "npm run test && npm run build",
     "preview": "vite preview",
+    "size": "node scripts/size.mjs",
+    "size:build": "npm run build && npm run size",
     "test": "node --import tsx --test tests/**/*.test.ts",
     "test:all": "npm run test && npm run test:browser",
     "test:browser": "tsx tests/run-browser-tests.ts",

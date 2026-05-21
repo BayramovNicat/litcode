@@ -203,8 +203,11 @@ export function patchChildrenByIndex(parent: Node, nextChildren: Node[]): void {
   }
 }
 
-export function patchKeyedChildren(parent: Node, nextChildren: Node[]): void {
-  const currentChildren = childNodesToArray(parent);
+export function patchKeyedChildren(
+  parent: Node,
+  nextChildren: Node[],
+  currentChildren = childNodesToArray(parent),
+): void {
   const keyedCurrent = new Map<string, Node>();
   const unkeyedCurrent: Node[] = [];
 
@@ -257,8 +260,11 @@ export function patchKeyedChildren(parent: Node, nextChildren: Node[]): void {
   }
 }
 
-export function patchFullyKeyedChildren(parent: Node, nextChildren: Node[]): void {
-  const currentChildren = childNodesToArray(parent);
+export function patchFullyKeyedChildren(
+  parent: Node,
+  nextChildren: Node[],
+  currentChildren = childNodesToArray(parent),
+): void {
   const keyedCurrent = new Map<string, Node>();
   const currentIndexes = new Map<Node, number>();
   const sources = new Array<number>(nextChildren.length);
@@ -346,53 +352,68 @@ export function longestIncreasingSubsequence(values: number[]): number[] {
 }
 
 export function patchChildren(parent: Node, nextChildren: Node[]): void {
-  const currentChildren = childNodesToArray(parent);
+  const nextLength = nextChildren.length;
+  const firstChild = parent.firstChild;
 
-  if (currentChildren.length === 0) {
+  if (!firstChild) {
     appendNodes(parent, nextChildren);
     return;
   }
 
-  if (nextChildren.length === 0) {
+  if (nextLength === 0) {
     parent.textContent = '';
     return;
   }
 
-  if (currentChildren.length === nextChildren.length) {
-    let sameKeys = true;
+  const currentLength = parent.childNodes.length;
 
-    for (let index = 0; index < currentChildren.length; index++) {
-      const currentKey = getNodeKey(currentChildren[index]);
-      const nextKey = getNodeKey(nextChildren[index]);
-
-      if (currentKey !== nextKey) {
-        sameKeys = false;
-        break;
-      }
-    }
-
-    if (sameKeys) {
+  if (currentLength === nextLength) {
+    if (hasSameKeysByIndex(parent, nextChildren)) {
       patchChildrenByIndex(parent, nextChildren);
       return;
     }
   }
 
-  if (hasKeyedChildren(currentChildren) || hasKeyedChildren(nextChildren)) {
+  if (hasKeyedChildNodes(parent) || hasKeyedChildren(nextChildren)) {
+    const currentChildren = childNodesToArray(parent);
+
     if (
-      currentChildren.length > 16 &&
-      currentChildren.length === nextChildren.length &&
+      currentLength > 16 &&
+      currentLength === nextLength &&
       hasAllKeys(currentChildren) &&
       hasAllKeys(nextChildren)
     ) {
-      patchFullyKeyedChildren(parent, nextChildren);
+      patchFullyKeyedChildren(parent, nextChildren, currentChildren);
       return;
     }
 
-    patchKeyedChildren(parent, nextChildren);
+    patchKeyedChildren(parent, nextChildren, currentChildren);
     return;
   }
 
   patchChildrenByIndex(parent, nextChildren);
+}
+
+function hasSameKeysByIndex(parent: Node, nextChildren: Node[]): boolean {
+  let current = parent.firstChild;
+
+  for (let index = 0; index < nextChildren.length; index++) {
+    if (!current || getNodeKey(current) !== getNodeKey(nextChildren[index])) return false;
+    current = current.nextSibling;
+  }
+
+  return true;
+}
+
+function hasKeyedChildNodes(parent: Node): boolean {
+  let child = parent.firstChild;
+
+  while (child) {
+    if (getNodeKey(child) !== undefined) return true;
+    child = child.nextSibling;
+  }
+
+  return false;
 }
 
 export function patchElement(current: Element, next: Element): void {

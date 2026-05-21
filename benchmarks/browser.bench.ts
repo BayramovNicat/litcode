@@ -429,6 +429,39 @@ const benches: Bench[] = [
       };
     },
   },
+  {
+    name: 'litcode keyed reorder 20',
+    iterations: 5_000,
+    setup(target) {
+      const items = Array.from({ length: 20 }, (_, index) => index);
+      const reversed = [...items].reverse();
+      const handle = lcMount(lcKeyedListView(items), target);
+      let flipped = false;
+      return () => {
+        flipped = !flipped;
+        handle.update(lcKeyedListView(flipped ? reversed : items));
+      };
+    },
+  },
+  {
+    name: 'litcode mount/destroy small tree',
+    iterations: 5_000,
+    setup(target) {
+      let count = 0;
+      return () => {
+        const handle = lcMount(
+          lcHtml`<section>
+            <h1>${count}</h1>
+            <button onclick="${() => count++}">Count ${count}</button>
+            <p>${count % 2 ? 'odd' : 'even'}</p>
+          </section>`,
+          target,
+        );
+        handle.destroy();
+        count++;
+      };
+    },
+  },
 ];
 
 console.log(`DOM browser benchmarks (${sampleCount} samples, ms/update)`);

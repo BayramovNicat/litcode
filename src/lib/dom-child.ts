@@ -160,7 +160,7 @@ export function updatePrimitiveChildPart(
 
   if (value === null || value === undefined || value === false) {
     removeNodes(part.nodes);
-    resetChildPart(part, []);
+    resetPrimitiveChildPart(part);
     return true;
   }
 
@@ -172,7 +172,7 @@ export function updatePrimitiveChildPart(
 
     if (part.nodes.length > 1) removeNodes(part.nodes, 1);
 
-    resetChildPart(part, [current]);
+    resetPrimitiveChildPart(part, current);
     return true;
   }
 
@@ -181,7 +181,7 @@ export function updatePrimitiveChildPart(
 
   removeNodes(part.nodes);
 
-  resetChildPart(part, [next]);
+  resetPrimitiveChildPart(part, next);
   return true;
 }
 
@@ -199,6 +199,14 @@ export function isPrimitiveChild(
 function removeNodes(nodes: Node[], start = 0): void {
   for (let index = start; index < nodes.length; index++)
     nodes[index].parentNode?.removeChild(nodes[index]);
+}
+
+function resetPrimitiveChildPart(part: ChildPart, node?: Node): void {
+  part.nodes.length = 0;
+  if (node) part.nodes[0] = node;
+  part.instance = undefined;
+  part.array = undefined;
+  part.repeat = undefined;
 }
 
 function isRepeatResult(value: any) {

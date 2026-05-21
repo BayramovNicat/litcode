@@ -68,7 +68,9 @@ import {
 ```
 
 For renderer-only bundles, import from `@holmityd/litcode/core` to avoid loading the
-variant helpers and their class-merging dependency.
+variant helpers and their class-merging dependency. This is the recommended path for
+memory- and CPU-constrained devices; use the root import when you also need `cn` or
+`tv`.
 
 - `html` creates a template view from a tagged template literal.
 - `mount` renders a view into a DOM element and returns an update handle.
@@ -84,6 +86,7 @@ variant helpers and their class-merging dependency.
 npm install
 npm run test
 npm run test:browser
+npm run size:build
 npm run build
 ```
 

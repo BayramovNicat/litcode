@@ -10,7 +10,7 @@ const baseConfig = {
     },
   },
   build: {
-    target: 'es2017',
+    target: 'esnext',
   },
 };
 
@@ -20,7 +20,7 @@ export default defineConfig(({ command, mode }) => {
       ...baseConfig,
       publicDir: false,
       build: {
-        target: 'es2017',
+        target: 'esnext',
         lib: {
           entry: {
             index: fileURLToPath(new URL('./src/lib/index.ts', import.meta.url)),

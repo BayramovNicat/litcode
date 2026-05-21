@@ -8,6 +8,7 @@ import {
   type LitcodeElement,
   type Part,
   type TemplateInstance,
+  booleanAttributeNames,
   booleanAttributes,
   templateCache,
   booleanSelector,
@@ -37,24 +38,10 @@ export function getTemplateCacheEntry(
     const template = document.createElement('template');
     template.innerHTML = cacheKey;
 
-    const hasBooleanAttributes = booleanSelector
-      ? Array.from(template.content.querySelectorAll(booleanSelector)).some((el) => {
-          for (const attribute of booleanAttributes) {
-            if (el.getAttribute(attribute) === '') return true;
-          }
-          return false;
-        })
-      : false;
-
-    const hasKeys = Array.from(template.content.querySelectorAll(keySelector)).some((el) => {
-      const key = el.getAttribute('key');
-      return key !== null && !key.startsWith(markerPrefix);
-    });
-
     cached = {
       template,
-      hasBooleanAttributes,
-      hasKeys,
+      hasBooleanAttributes: hasBooleanAttributeMarkers(template.content),
+      hasKeys: hasStaticKeys(template.content),
     };
     templateCache.set(cacheKey, cached);
   }
@@ -456,6 +443,33 @@ function markerIndexFromAttributeValue(value: string): number | undefined {
 
   const index = Number(value.slice(markerPrefix.length));
   return Number.isInteger(index) ? index : undefined;
+}
+
+function hasBooleanAttributeMarkers(root: ParentNode): boolean {
+  if (!booleanSelector) return false;
+
+  const elements = root.querySelectorAll(booleanSelector);
+  for (let index = 0; index < elements.length; index++) {
+    const element = elements[index];
+
+    for (let attrIndex = 0; attrIndex < booleanAttributeNames.length; attrIndex++) {
+      const attribute = booleanAttributeNames[attrIndex];
+      if (element.getAttribute(attribute) === '') return true;
+    }
+  }
+
+  return false;
+}
+
+function hasStaticKeys(root: ParentNode): boolean {
+  const elements = root.querySelectorAll(keySelector);
+
+  for (let index = 0; index < elements.length; index++) {
+    const key = elements[index].getAttribute('key');
+    if (key !== null && !key.startsWith(markerPrefix)) return true;
+  }
+
+  return false;
 }
 
 function setAttributeValue(element: Element, name: string, value: unknown): void {

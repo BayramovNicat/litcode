@@ -94,18 +94,18 @@ export type LitcodeElement = Element & {
   __litcodeKey?: string;
 };
 
-export const booleanAttributes = new Set([
+export const booleanAttributeNames = [
   'disabled',
   'checked',
   'selected',
   'readonly',
   'required',
-]);
+] as const;
+export const booleanAttributes = new Set<string>(booleanAttributeNames);
 export const templateCache = new Map<string, TemplateCacheEntry>();
-export const booleanSelector = Array.from(
-  booleanAttributes,
-  (attribute) => `[${attribute}=""]`,
-).join(',');
+export const booleanSelector = booleanAttributeNames
+  .map((attribute) => `[${attribute}=""]`)
+  .join(',');
 export const keySelector = '[key]';
 export const markerPrefix = 'litcode-part-';
 
