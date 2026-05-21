@@ -307,31 +307,22 @@ function templateCacheKey(strings: TemplateStringsArray, values: readonly unknow
     if (index >= values.length) continue;
 
     const value = values[index];
-    const eventName = domHelpers.eventNameFromAttribute(part);
+    const insideTag = domHelpers.isInsideTag(source);
+    const eventName = insideTag ? domHelpers.eventNameFromAttribute(part) : undefined;
 
     if (eventName) {
       source += domHelpers.markerAttributeValue(`${markerPrefix}${index}`);
       continue;
     }
 
-    const attributeName = domHelpers.isInsideTag(source)
-      ? domHelpers.attributeNameFromAttribute(part)
-      : undefined;
+    const attributeName = insideTag ? domHelpers.attributeNameFromAttribute(part) : undefined;
 
     if (attributeName) {
       source += domHelpers.markerAttributeValue(`${markerPrefix}${index}`);
       continue;
     }
 
-    if (domHelpers.isInsideTag(source)) {
-      const unquotedAttributeName = domHelpers.unquotedAttributeNameFromAttribute(part);
-
-      if (unquotedAttributeName) {
-        throw new TypeError(
-          `Dynamic attribute "${unquotedAttributeName}" must be quoted. Use ${unquotedAttributeName}="\${value}" instead of ${unquotedAttributeName}=\${value}.`,
-        );
-      }
-
+    if (insideTag) {
       source += domHelpers.escapeAttribute(value);
       continue;
     }
@@ -372,10 +363,9 @@ function getTemplateParts(cached: TemplateCacheEntry, result: TemplateResult): S
   for (let index = 0; index < result.values.length; index++) {
     const previous = result.strings[index];
     source += previous;
-    const eventName = domHelpers.eventNameFromAttribute(previous);
-    const attributeName = domHelpers.isInsideTag(source)
-      ? domHelpers.attributeNameFromAttribute(previous)
-      : undefined;
+    const insideTag = domHelpers.isInsideTag(source);
+    const eventName = insideTag ? domHelpers.eventNameFromAttribute(previous) : undefined;
+    const attributeName = insideTag ? domHelpers.attributeNameFromAttribute(previous) : undefined;
 
     if (eventName) {
       source += domHelpers.markerAttributeValue(`${markerPrefix}${index}`);
@@ -395,7 +385,7 @@ function getTemplateParts(cached: TemplateCacheEntry, result: TemplateResult): S
       continue;
     }
 
-    if (domHelpers.isInsideTag(source)) {
+    if (insideTag) {
       source += domHelpers.escapeAttribute(result.values[index]);
     } else {
       source += `<!--${markerPrefix}${index}-->`;

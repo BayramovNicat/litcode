@@ -42,12 +42,12 @@ $effect(() => {
 Event handlers are passed as typed values:
 
 ```ts
-html`<button onclick="${() => console.log('clicked')}">Click</button>`;
+html`<button onclick=${() => console.log('clicked')}>Click</button>`;
 ```
 
-Dynamic attributes and events must use quoted interpolation, for example
-`class="${value}"`. Unquoted `class=${value}` and `onclick=${handler}` forms are
-intentionally rejected.
+Dynamic attributes and events can use either quoted interpolation, such as
+`class="${value}"`, or unquoted interpolation, such as `checked=${done}` and
+`onclick=${handler}`.
 
 ## API
 

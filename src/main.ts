@@ -80,8 +80,8 @@ function App(): View {
               <label class="flex flex-1 items-center gap-2">
                 <input
                   type="checkbox"
-                  checked="${todo.done}"
-                  onchange="${() => toggleTodo(todo.id)}"
+                  checked=${todo.done}
+                  onchange=${() => toggleTodo(todo.id)}
                   class="size-4 rounded border-input accent-primary"
                 />
                 <span

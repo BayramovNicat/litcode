@@ -3,17 +3,12 @@ export function isInsideTag(source: string): boolean {
 }
 
 export function eventNameFromAttribute(source: string): string | undefined {
-  const match = source.match(/\s(on[a-z][\w-]*)\s*=\s*["']$/i);
+  const match = source.match(/\s(on[a-z][\w-]*)\s*=\s*(?:["'])?$/i);
   return match?.[1]?.slice(2).toLowerCase();
 }
 
 export function attributeNameFromAttribute(source: string): string | undefined {
-  const match = source.match(/\s([:@a-zA-Z_][\w:.-]*)\s*=\s*["']$/);
-  return match?.[1];
-}
-
-export function unquotedAttributeNameFromAttribute(source: string): string | undefined {
-  const match = source.match(/\s([:@a-zA-Z_][\w:.-]*)\s*=\s*$/);
+  const match = source.match(/\s([:@a-zA-Z_][\w:.-]*)\s*=\s*(?:["'])?$/);
   return match?.[1];
 }
 

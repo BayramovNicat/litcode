@@ -111,15 +111,35 @@ describe('dom patching', () => {
     assert.equal(button.hasAttribute('onclick'), false);
   });
 
-  it('rejects unquoted dynamic attributes and events', () => {
-    assert.throws(
-      () => mount(html`<button class=${'active'}>Go</button>`, setupDom()),
-      /Dynamic attribute "class" must be quoted/,
-    );
-    assert.throws(
-      () => mount(html`<button onclick=${() => undefined}>Go</button>`, setupDom()),
-      /Dynamic attribute "onclick" must be quoted/,
-    );
+  it('supports unquoted dynamic attributes and events', () => {
+    const app = setupDom();
+    let changes = 0;
+    const view = (done: boolean, className: string) => html`
+      <label class=${className}>
+        <input type="checkbox" checked=${done} onchange=${() => changes++} />
+      </label>
+    `;
+    const handle = mount(view(false, 'first active'), app);
+    const label = app.querySelector('label')!;
+    const input = app.querySelector('input')!;
+
+    assert.equal(label.className, 'first active');
+    assert.equal(input.checked, false);
+    assert.equal(input.hasAttribute('checked'), false);
+    assert.equal(input.hasAttribute('onchange'), false);
+
+    input.dispatchEvent(new Event('change'));
+    assert.equal(changes, 1);
+
+    handle.update(view(true, 'second active'));
+
+    assert.equal(app.querySelector('label'), label);
+    assert.equal(app.querySelector('input'), input);
+    assert.equal(label.className, 'second active');
+    assert.equal(input.checked, true);
+
+    input.dispatchEvent(new Event('change'));
+    assert.equal(changes, 2);
   });
 
   it('reorders keyed children without replacing nodes', () => {

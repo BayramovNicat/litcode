@@ -24,5 +24,5 @@ $effect(() => {
 
 Runtime note: without a compiler, browser-style string handlers like
 `onclick="count + 1"` cannot safely close over TypeScript variables. Interpolate typed
-values instead: `onclick="${() => count.value++}"`. Dynamic attribute/event
-interpolations must be quoted.
+values instead: `onclick=${() => count.value++}`. Dynamic attribute/event
+interpolations can be quoted or unquoted.

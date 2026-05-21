@@ -242,21 +242,34 @@ test('cleans up reactive template parts on destroy', async () => {
   equal(target.textContent, '', 'destroyed reactive part should not write into the DOM');
 });
 
-test('rejects unquoted dynamic attributes in a real browser', () => {
+test('supports unquoted dynamic attributes and events in a real browser', () => {
   const target = resetTarget();
+  let changes = 0;
+  const view = (done: boolean, className: string) => html`
+    <label class=${className}>
+      <input type="checkbox" checked=${done} onchange=${() => changes++} />
+    </label>
+  `;
+  const handle = mount(view(false, 'first active'), target);
+  const label = target.querySelector('label');
+  const input = target.querySelector('input');
 
-  let error: unknown;
-  try {
-    mount(html`<button class=${'active'}>Go</button>`, target);
-  } catch (caught) {
-    error = caught;
-  }
+  assert(label, 'label should be rendered');
+  assert(input, 'input should be rendered');
+  equal(label.className, 'first active', 'class attribute should render');
+  equal(input.checked, false, 'checked property should render false');
+  equal(input.hasAttribute('checked'), false, 'false checked should remove the attribute');
+  equal(input.hasAttribute('onchange'), false, 'event marker should not leave inline handlers');
 
-  assert(error instanceof TypeError, 'unquoted dynamic attribute should throw TypeError');
-  assert(
-    error.message.includes('Dynamic attribute "class" must be quoted'),
-    'unquoted dynamic attribute error should explain the fix',
-  );
+  input.dispatchEvent(new Event('change'));
+  equal(changes, 1, 'unquoted event handler should run');
+
+  handle.update(view(true, 'second active'));
+
+  equal(target.querySelector('label'), label, 'label node should be preserved');
+  equal(target.querySelector('input'), input, 'input node should be preserved');
+  equal(label.className, 'second active', 'class attribute should update');
+  equal(input.checked, true, 'checked property should update');
 });
 
 async function runTests(): Promise<void> {
