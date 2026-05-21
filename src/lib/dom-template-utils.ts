@@ -5,7 +5,12 @@ export function pathToNode(root: Node, path: number[]): Node | undefined {
   let node: Node | undefined = root;
 
   for (let index = 0; index < path.length; index++) {
-    node = node.childNodes[path[index]];
+    let child = node.firstChild;
+    const targetIdx = path[index];
+    for (let i = 0; i < targetIdx && child; i++) {
+      child = child.nextSibling;
+    }
+    node = child ?? undefined;
     if (!node) return undefined;
   }
 
@@ -20,7 +25,13 @@ export function getNodePath(node: Node, root: Node): number[] {
     const parentNode: ParentNode | null = current.parentNode;
     if (!parentNode) break;
 
-    path.push(Array.prototype.indexOf.call(parentNode.childNodes, current));
+    let index = 0;
+    let sibling = current.previousSibling;
+    while (sibling) {
+      index++;
+      sibling = sibling.previousSibling;
+    }
+    path.push(index);
     current = parentNode;
   }
 

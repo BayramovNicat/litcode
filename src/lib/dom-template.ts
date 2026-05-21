@@ -36,12 +36,25 @@ export function getTemplateCacheEntry(
   if (!cached) {
     const template = document.createElement('template');
     template.innerHTML = cacheKey;
+
+    const hasBooleanAttributes = booleanSelector
+      ? Array.from(template.content.querySelectorAll(booleanSelector)).some((el) => {
+          for (const attribute of booleanAttributes) {
+            if (el.getAttribute(attribute) === '') return true;
+          }
+          return false;
+        })
+      : false;
+
+    const hasKeys = Array.from(template.content.querySelectorAll(keySelector)).some((el) => {
+      const key = el.getAttribute('key');
+      return key !== null && !key.startsWith(markerPrefix);
+    });
+
     cached = {
       template,
-      hasBooleanAttributes: booleanSelector
-        ? !!template.content.querySelector(booleanSelector)
-        : false,
-      hasKeys: !!template.content.querySelector(keySelector),
+      hasBooleanAttributes,
+      hasKeys,
     };
     templateCache.set(cacheKey, cached);
   }
