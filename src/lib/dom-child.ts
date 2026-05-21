@@ -111,7 +111,8 @@ function updateTemplateArrayChildPart(part: ChildPart, value: unknown): boolean 
     if (canUpdate) {
       for (let index = 0; index < length; index++)
         updateTemplateInstance(current[index], value[index]);
-      part.nodes = collectInstanceNodes(current);
+      // Skip redundant part.nodes = collectInstanceNodes(current) allocation.
+      // Top-level DOM nodes of template instances are static and never change their references or count.
       part.instance = undefined;
       part.repeat = undefined;
       return true;

@@ -34,12 +34,24 @@ export function patchAttributes(current: Element, next: Element): void {
 
   for (let index = currentAttributes.length - 1; index >= 0; index--) {
     const { name } = currentAttributes[index];
-    if (!next.hasAttribute(name)) current.removeAttribute(name);
+    if (!next.hasAttribute(name)) {
+      if (name === 'class') {
+        current.className = '';
+      } else {
+        current.removeAttribute(name);
+      }
+    }
   }
 
   for (let index = 0; index < nextAttributes.length; index++) {
     const { name, value } = nextAttributes[index];
-    if (current.getAttribute(name) !== value) current.setAttribute(name, value);
+    if (current.getAttribute(name) !== value) {
+      if (name === 'class') {
+        current.className = value;
+      } else {
+        current.setAttribute(name, value);
+      }
+    }
   }
 }
 
@@ -170,25 +182,24 @@ export function hasAllKeys(children: Node[]): boolean {
 }
 
 export function patchChildrenByIndex(parent: Node, nextChildren: Node[]): void {
-  const currentChildren = parent.childNodes;
-  const currentLength = currentChildren.length;
   const nextLength = nextChildren.length;
-  const commonLength = Math.min(currentLength, nextLength);
+  let current = parent.firstChild;
+  let index = 0;
 
-  for (let index = 0; index < commonLength; index++) {
-    const current = currentChildren[index];
-    const next = nextChildren[index];
-
-    patchNode(current, next);
+  while (current && index < nextLength) {
+    const patched = patchNode(current, nextChildren[index]);
+    current = patched.nextSibling;
+    index++;
   }
 
-  for (let index = commonLength; index < nextLength; index++) {
+  for (; index < nextLength; index++) {
     parent.appendChild(nextChildren[index]);
   }
 
-  for (let index = currentLength - 1; index >= nextLength; index--) {
-    const child = parent.childNodes[index];
-    if (child) parent.removeChild(child);
+  while (current) {
+    const nextSibling = current.nextSibling;
+    parent.removeChild(current);
+    current = nextSibling;
   }
 }
 

@@ -16,7 +16,7 @@ import {
 } from './template';
 import * as domHelpers from './dom-helpers';
 import * as domTemplateUtils from './dom-template-utils';
-import { updateChildPart } from './dom-child';
+import { updateChildPart, updatePrimitiveChildPart } from './dom-child';
 import { $effect } from './runes';
 
 let templateCacheDocument: Document | undefined;
@@ -112,6 +112,27 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
     const rawValue = values[part.index];
 
     if (part.kind === 'child') {
+      if (
+        typeof rawValue === 'string' ||
+        typeof rawValue === 'number' ||
+        typeof rawValue === 'boolean' ||
+        rawValue === null ||
+        rawValue === undefined
+      ) {
+        if (part.cleanup) {
+          part.cleanup();
+          part.cleanup = undefined;
+        }
+        part.source = undefined;
+        const childPart = part as ChildPart;
+        if (childPart.instance || childPart.repeat || childPart.array) {
+          updateChildPart(childPart, rawValue);
+        } else {
+          updatePrimitiveChildPart(childPart, rawValue);
+        }
+        continue;
+      }
+
       let isRuneVal = false;
       let isReactiveFn = false;
 
@@ -145,6 +166,25 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
     }
 
     if (part.kind === 'attribute') {
+      if (
+        typeof rawValue === 'string' ||
+        typeof rawValue === 'number' ||
+        typeof rawValue === 'boolean' ||
+        rawValue === null ||
+        rawValue === undefined
+      ) {
+        if (part.cleanup) {
+          part.cleanup();
+          part.cleanup = undefined;
+        }
+        part.source = undefined;
+        if ((part as AttributePart).value !== rawValue) {
+          setAttributeValue(part.element, (part as AttributePart).name, rawValue);
+          (part as AttributePart).value = rawValue;
+        }
+        continue;
+      }
+
       let isRuneVal = false;
       let isReactiveFn = false;
 
@@ -163,7 +203,7 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
           part.source = rawValue;
           part.cleanup = $effect(() => {
             const resolvedValue = isRuneVal ? (rawValue as any).value : (rawValue as Function)();
-            if (!Object.is((part as AttributePart).value, resolvedValue)) {
+            if ((part as AttributePart).value !== resolvedValue) {
               setAttributeValue(part.element, (part as AttributePart).name, resolvedValue);
               (part as AttributePart).value = resolvedValue;
             }
@@ -175,7 +215,7 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
           part.cleanup = undefined;
         }
         part.source = undefined;
-        if (!Object.is((part as AttributePart).value, rawValue)) {
+        if ((part as AttributePart).value !== rawValue) {
           setAttributeValue(part.element, (part as AttributePart).name, rawValue);
           (part as AttributePart).value = rawValue;
         }
@@ -407,22 +447,48 @@ function markerIndexFromAttributeValue(value: string): number | undefined {
 
 function setAttributeValue(element: Element, name: string, value: unknown): void {
   if (value === null || value === undefined || value === false) {
-    element.removeAttribute(name);
-    if (booleanAttributes.has(name) && name in element) {
-      (element as unknown as Record<string, boolean>)[name] = false;
-    } else if (name === 'value' && 'value' in element) {
+    if (name === 'value' && 'value' in element) {
       (element as HTMLInputElement).value = '';
+    } else if (name === 'class') {
+      element.className = '';
+    } else {
+      element.removeAttribute(name);
+      if (booleanAttributes.has(name) && name in element) {
+        (element as unknown as Record<string, boolean>)[name] = false;
+      }
+    }
+    return;
+  }
+
+  if (name === 'value' && 'value' in element) {
+    const nextVal = String(value);
+    if ((element as HTMLInputElement).value !== nextVal) {
+      (element as HTMLInputElement).value = nextVal;
+    }
+    return;
+  }
+
+  if (name === 'checked' && 'checked' in element) {
+    const nextVal = !!value;
+    if ((element as HTMLInputElement).checked !== nextVal) {
+      (element as HTMLInputElement).checked = nextVal;
     }
     return;
   }
 
   const attributeValue = value === true && booleanAttributes.has(name) ? '' : String(value);
+
+  if (name === 'class') {
+    if (element.className !== attributeValue) {
+      element.className = attributeValue;
+    }
+    return;
+  }
+
   element.setAttribute(name, attributeValue);
 
   if (booleanAttributes.has(name) && name in element) {
     (element as unknown as Record<string, boolean>)[name] = true;
-  } else if (name === 'value' && 'value' in element) {
-    (element as HTMLInputElement).value = attributeValue;
   }
 }
 
