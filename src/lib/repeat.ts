@@ -11,179 +11,224 @@ export function updateRepeatChildPart(part: ChildPart, value: any): void {
   const parent = part.marker.parentNode;
   if (!parent) return;
 
-  const currentBlocks = part.repeat?.blocks ?? [];
-  const keyedCurrent = new Map<string, RepeatBlock>();
+  const currentBlocks: (RepeatBlock | null)[] = part.repeat?.blocks
+    ? [...part.repeat.blocks]
+    : [];
+  const oldLength = currentBlocks.length;
+  const newLength = value.items.length;
 
-  for (let index = 0; index < currentBlocks.length; index++) {
-    const block = currentBlocks[index];
-    if (!keyedCurrent.has(block.key)) keyedCurrent.set(block.key, block);
+  const nextBlocks: RepeatBlock[] = new Array(newLength);
+  const skipIndexCheck = value.render.length < 2;
+
+  // Pre-calculate new keys to avoid repeated key calls
+  const newKeys = new Array<string>(newLength);
+  for (let i = 0; i < newLength; i++) {
+    newKeys[i] = String(value.key(value.items[i], i));
   }
 
-  const length = value.items.length;
-  const nextBlocks: RepeatBlock[] = new Array(length);
-  const sources = new Array<number>(length);
-  const retained = new Set<RepeatBlock>();
+  let oldHead = 0;
+  let oldTail = oldLength - 1;
+  let newHead = 0;
+  let newTail = newLength - 1;
 
-  for (let index = 0; index < length; index++) {
-    const item = value.items[index];
-    const key = String(value.key(item, index));
-    const current = keyedCurrent.get(key);
+  let newKeyToIndexMap: Map<string, number> | undefined;
+  let oldKeyToIndexMap: Map<string, number> | undefined;
 
-    if (current) {
-      retained.add(current);
-      sources[index] = current.index;
-
-      if (Object.is(current.item, item) && current.index === index) {
-        current.item = item;
-        current.index = index;
-      } else if (current.instance) {
-        const rendered = value.render(item, index);
-
-        if (isTemplateResult(rendered) && current.instance.result.strings === rendered.strings) {
-          updateTemplateInstance(current.instance, rendered);
-          current.nodes = current.instance.nodes;
-          current.item = item;
-          current.index = index;
-        } else {
-          destroyTemplateInstance(current.instance);
-          current.instance = undefined;
-          const nextNodes = normalize(rendered);
-          current.nodes = patchNodesBeforeMarker(parent, current.nodes, nextNodes, part.marker);
-          current.instance = isTemplateResult(rendered)
-            ? (nextNodes as any).__litcodeInstance
-            : undefined;
-          current.item = item;
-          current.index = index;
-        }
+  // Helper to patch a block in place
+  const patchBlock = (block: RepeatBlock, item: any, index: number): void => {
+    if (Object.is(block.item, item) && (skipIndexCheck || block.index === index)) {
+      block.item = item;
+      block.index = index;
+      return;
+    }
+    const localMarker = index + 1 < newLength ? (nextBlocks[index + 1] ? nextBlocks[index + 1].nodes[0] : part.marker) : part.marker;
+    if (block.instance) {
+      const rendered = value.render(item, index);
+      if (isTemplateResult(rendered) && block.instance.result.strings === rendered.strings) {
+        updateTemplateInstance(block.instance, rendered);
+        block.nodes = block.instance.nodes;
+        block.item = item;
+        block.index = index;
       } else {
-        const rendered = value.render(item, index);
+        destroyTemplateInstance(block.instance);
+        block.instance = undefined;
         const nextNodes = normalize(rendered);
-        current.nodes = patchNodesBeforeMarker(parent, current.nodes, nextNodes, part.marker);
-        current.instance = isTemplateResult(rendered)
-          ? ((nextNodes as any).__litcodeInstance ?? current.instance)
+        block.nodes = patchNodesBeforeMarker(parent, block.nodes, nextNodes, localMarker);
+        block.instance = isTemplateResult(rendered)
+          ? (nextNodes as any).__litcodeInstance
           : undefined;
-        current.item = item;
-        current.index = index;
+        block.item = item;
+        block.index = index;
+      }
+    } else {
+      const rendered = value.render(item, index);
+      const nextNodes = normalize(rendered);
+      block.nodes = patchNodesBeforeMarker(parent, block.nodes, nextNodes, localMarker);
+      block.instance = isTemplateResult(rendered)
+        ? ((nextNodes as any).__litcodeInstance ?? block.instance)
+        : undefined;
+      block.item = item;
+      block.index = index;
+    }
+  };
+
+  // Helper to move block's DOM nodes before a given anchor Node
+  const moveBlockBefore = (block: RepeatBlock, anchor: Node | null): void => {
+    const nodes = block.nodes;
+    for (let nodeIndex = nodes.length - 1; nodeIndex >= 0; nodeIndex--) {
+      const node = nodes[nodeIndex];
+      if (node.nextSibling !== anchor) {
+        parent.insertBefore(node, anchor);
+      }
+      anchor = node;
+    }
+  };
+
+  // Helper to clean up and remove a block
+  const cleanupBlock = (block: RepeatBlock): void => {
+    block.cleanup?.();
+    if (block.instance) {
+      destroyTemplateInstance(block.instance);
+    }
+    const nodes = block.nodes;
+    for (let index = 0; index < nodes.length; index++) {
+      nodes[index].parentNode?.removeChild(nodes[index]);
+    }
+  };
+
+  while (oldHead <= oldTail && newHead <= newTail) {
+    const oldBlockHead = currentBlocks[oldHead];
+    const oldBlockTail = currentBlocks[oldTail];
+
+    if (oldBlockHead === null) {
+      oldHead++;
+    } else if (oldBlockTail === null) {
+      oldTail--;
+    } else if (oldBlockHead.key === newKeys[newHead]) {
+      // Old head matches new head; update in place
+      patchBlock(oldBlockHead, value.items[newHead], newHead);
+      nextBlocks[newHead] = oldBlockHead;
+      oldHead++;
+      newHead++;
+    } else if (oldBlockTail.key === newKeys[newTail]) {
+      // Old tail matches new tail; update in place
+      patchBlock(oldBlockTail, value.items[newTail], newTail);
+      nextBlocks[newTail] = oldBlockTail;
+      oldTail--;
+      newTail--;
+    } else if (oldBlockHead.key === newKeys[newTail]) {
+      // Old head matches new tail; update and move to new tail
+      patchBlock(oldBlockHead, value.items[newTail], newTail);
+      const anchor = newTail + 1 < newLength ? nextBlocks[newTail + 1].nodes[0] : part.marker;
+      moveBlockBefore(oldBlockHead, anchor);
+      nextBlocks[newTail] = oldBlockHead;
+      oldHead++;
+      newTail--;
+    } else if (oldBlockTail.key === newKeys[newHead]) {
+      // Old tail matches new head; update and move to new head
+      patchBlock(oldBlockTail, value.items[newHead], newHead);
+      const anchor = oldBlockHead.nodes[0];
+      moveBlockBefore(oldBlockTail, anchor);
+      nextBlocks[newHead] = oldBlockTail;
+      oldTail--;
+      newHead++;
+    } else {
+      if (newKeyToIndexMap === undefined) {
+        newKeyToIndexMap = new Map<string, number>();
+        for (let i = newHead; i <= newTail; i++) {
+          newKeyToIndexMap.set(newKeys[i], i);
+        }
+        oldKeyToIndexMap = new Map<string, number>();
+        for (let i = oldHead; i <= oldTail; i++) {
+          const b = currentBlocks[i];
+          if (b !== null) {
+            oldKeyToIndexMap.set(b.key, i);
+          }
+        }
       }
 
-      nextBlocks[index] = current;
-      continue;
+      const oldKeyAtHead = oldBlockHead.key;
+      const oldKeyAtTail = oldBlockTail.key;
+
+      if (!newKeyToIndexMap.has(oldKeyAtHead)) {
+        // Old head is no longer in new list; remove
+        cleanupBlock(oldBlockHead);
+        oldHead++;
+      } else if (!newKeyToIndexMap.has(oldKeyAtTail)) {
+        // Old tail is no longer in new list; remove
+        cleanupBlock(oldBlockTail);
+        oldTail--;
+      } else {
+        // Find existing block
+        const oldIndex = oldKeyToIndexMap!.get(newKeys[newHead]);
+        const oldBlock = oldIndex !== undefined ? currentBlocks[oldIndex] : null;
+
+        if (oldBlock === null) {
+          // Create new block and insert before current old head
+          const item = value.items[newHead];
+          const rendered = value.render(item, newHead);
+          const block = instantiateRepeatBlock(rendered, newKeys[newHead], item, newHead);
+          const anchor = oldBlockHead.nodes[0];
+          moveBlockBefore(block, anchor);
+          nextBlocks[newHead] = block;
+        } else {
+          // Reuse old block
+          patchBlock(oldBlock, value.items[newHead], newHead);
+          const anchor = oldBlockHead.nodes[0];
+          moveBlockBefore(oldBlock, anchor);
+          nextBlocks[newHead] = oldBlock;
+          currentBlocks[oldIndex!] = null; // Mark as used
+        }
+        newHead++;
+      }
     }
-
-    const rendered = value.render(item, index);
-    sources[index] = -1;
-    nextBlocks[index] = instantiateRepeatBlock(rendered, key, item, index);
   }
 
-  for (let index = 0; index < currentBlocks.length; index++) {
-    const block = currentBlocks[index];
-    if (retained.has(block)) continue;
-
-    block.cleanup?.();
-    if (block.instance) destroyTemplateInstance(block.instance);
-    removeNodes(block.nodes);
+  // Add parts for any remaining new values
+  while (newHead <= newTail) {
+    const item = value.items[newHead];
+    const rendered = value.render(item, newHead);
+    const block = instantiateRepeatBlock(rendered, newKeys[newHead], item, newHead);
+    const anchor = newTail + 1 < newLength ? nextBlocks[newTail + 1].nodes[0] : part.marker;
+    moveBlockBefore(block, anchor);
+    nextBlocks[newHead] = block;
+    newHead++;
   }
 
-  moveRepeatBlocks(parent, nextBlocks, sources, part.marker);
+  // Remove any remaining unused old parts
+  while (oldHead <= oldTail) {
+    const block = currentBlocks[oldHead++];
+    if (block !== null) {
+      cleanupBlock(block);
+    }
+  }
 
+  // Collect all nodes to update the ChildPart's nodes
   part.nodes = collectRepeatNodes(nextBlocks);
   part.instance = undefined;
   part.repeat = { blocks: nextBlocks };
 }
 
-export function moveRepeatBlocks(
-  parent: Node,
-  blocks: RepeatBlock[],
-  sources: number[],
-  marker: Comment,
-): void {
-  const stable = longestIncreasingSubsequence(sources);
-
-  if (stable.length < blocks.length / 2) {
-    const fragment = document.createDocumentFragment();
-
-    for (let index = 0; index < blocks.length; index++) {
-      appendNodes(fragment, blocks[index].nodes);
-    }
-
-    parent.insertBefore(fragment, marker);
-    return;
-  }
-
-  let stableIndex = stable.length - 1;
-  let anchor: Node | null = marker;
-
-  for (let index = blocks.length - 1; index >= 0; index--) {
-    const block = blocks[index];
-    const first = block.nodes[0];
-
-    if (sources[index] !== -1 && stableIndex >= 0 && stable[stableIndex] === index) {
-      stableIndex--;
-      anchor = first;
-      continue;
-    }
-
-    for (let nodeIndex = block.nodes.length - 1; nodeIndex >= 0; nodeIndex--) {
-      const node = block.nodes[nodeIndex];
-      if (node.nextSibling !== anchor) parent.insertBefore(node, anchor);
-      anchor = node;
-    }
-  }
-}
-
-export function collectRepeatNodes(blocks: RepeatBlock[]): Node[] {
+function collectRepeatNodes(blocks: RepeatBlock[]): Node[] {
   let length = 0;
-  for (let index = 0; index < blocks.length; index++) length += blocks[index].nodes.length;
+  for (let index = 0; index < blocks.length; index++) {
+    if (blocks[index]) {
+      length += blocks[index].nodes.length;
+    }
+  }
 
   const nodes = new Array<Node>(length);
   let offset = 0;
 
   for (let index = 0; index < blocks.length; index++) {
-    const blockNodes = blocks[index].nodes;
-
-    for (let nodeIndex = 0; nodeIndex < blockNodes.length; nodeIndex++) {
-      nodes[offset++] = blockNodes[nodeIndex];
+    const block = blocks[index];
+    if (block) {
+      const blockNodes = block.nodes;
+      for (let nodeIndex = 0; nodeIndex < blockNodes.length; nodeIndex++) {
+        nodes[offset++] = blockNodes[nodeIndex];
+      }
     }
   }
 
   return nodes;
-}
-
-export function removeNodes(nodes: Node[]): void {
-  for (let index = 0; index < nodes.length; index++)
-    nodes[index].parentNode?.removeChild(nodes[index]);
-}
-
-function appendNodes(target: Node, nodes: Node[]): void {
-  for (let index = 0; index < nodes.length; index++) target.appendChild(nodes[index]);
-}
-
-function longestIncreasingSubsequence(values: number[]): number[] {
-  const predecessors = new Array<number>(values.length);
-  const result: number[] = [];
-
-  for (let index = 0; index < values.length; index++) {
-    const value = values[index];
-    if (value === -1) continue;
-
-    let low = 0;
-    let high = result.length;
-
-    while (low < high) {
-      const middle = (low + high) >> 1;
-      if (values[result[middle]] < value) low = middle + 1;
-      else high = middle;
-    }
-
-    if (low > 0) predecessors[index] = result[low - 1];
-    result[low] = index;
-  }
-
-  let cursor = result[result.length - 1];
-  for (let index = result.length - 1; index >= 0; index--) {
-    result[index] = cursor;
-    cursor = predecessors[cursor];
-  }
-
-  return result;
 }

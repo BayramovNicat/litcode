@@ -327,26 +327,38 @@ function getTemplateParts(cached: TemplateCacheEntry, result: TemplateResult): S
     | { kind: 'event'; name: string };
 
   const attributeParts = new Map<number, AttributePartDescriptor>();
+  let source = '';
 
   for (let index = 0; index < result.values.length; index++) {
     const previous = result.strings[index];
+    source += previous;
     const eventName = domHelpers.eventNameFromAttribute(previous);
-    const attributeName = domHelpers.isInsideTag(previous)
+    const attributeName = domHelpers.isInsideTag(source)
       ? domHelpers.attributeNameFromAttribute(previous)
       : undefined;
 
     if (eventName) {
+      source += domHelpers.markerAttributeValue(`${markerPrefix}${index}`);
       attributeParts.set(index, { kind: 'event', name: eventName });
       continue;
     }
 
     if (attributeName === 'key') {
+      source += domHelpers.markerAttributeValue(`${markerPrefix}${index}`);
       attributeParts.set(index, 'key');
       continue;
     }
 
     if (attributeName) {
+      source += domHelpers.markerAttributeValue(`${markerPrefix}${index}`);
       attributeParts.set(index, { kind: 'attribute', name: attributeName });
+      continue;
+    }
+
+    if (domHelpers.isInsideTag(source)) {
+      source += domHelpers.escapeAttribute(result.values[index]);
+    } else {
+      source += `<!--${markerPrefix}${index}-->`;
     }
   }
 
@@ -398,6 +410,8 @@ function setAttributeValue(element: Element, name: string, value: unknown): void
     element.removeAttribute(name);
     if (booleanAttributes.has(name) && name in element) {
       (element as unknown as Record<string, boolean>)[name] = false;
+    } else if (name === 'value' && 'value' in element) {
+      (element as HTMLInputElement).value = '';
     }
     return;
   }
@@ -407,6 +421,8 @@ function setAttributeValue(element: Element, name: string, value: unknown): void
 
   if (booleanAttributes.has(name) && name in element) {
     (element as unknown as Record<string, boolean>)[name] = true;
+  } else if (name === 'value' && 'value' in element) {
+    (element as HTMLInputElement).value = attributeValue;
   }
 }
 

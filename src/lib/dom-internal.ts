@@ -85,7 +85,7 @@ export function patchNodesBeforeMarker(
   parent: Node,
   currentNodes: Node[],
   nextNodes: Node[],
-  marker: Comment,
+  marker: Node,
 ): Node[] {
   const patchedNodes: Node[] = [];
   const length = Math.max(currentNodes.length, nextNodes.length);

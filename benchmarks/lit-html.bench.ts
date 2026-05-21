@@ -239,6 +239,38 @@ const benches: Bench[] = [
     },
   },
   {
+    name: 'litcode repeat reverse 1k',
+    iterations: 10,
+    warmup: 2,
+    setup() {
+      const app = setupDom();
+      const items = Array.from({ length: 1_000 }, (_, index) => index);
+      const handle = lcMount(lcRepeatedListView(items), app);
+      const reversed = [...items].reverse();
+      let flipped = false;
+      return () => {
+        flipped = !flipped;
+        handle.update(lcRepeatedListView(flipped ? reversed : items));
+      };
+    },
+  },
+  {
+    name: 'lit-html repeat reverse 1k',
+    iterations: 10,
+    warmup: 2,
+    setup() {
+      const app = setupDom();
+      const items = Array.from({ length: 1_000 }, (_, index) => index);
+      litRender(litRepeatedListView(items), app);
+      const reversed = [...items].reverse();
+      let flipped = false;
+      return () => {
+        flipped = !flipped;
+        litRender(litRepeatedListView(flipped ? reversed : items), app);
+      };
+    },
+  },
+  {
     name: 'litcode unkeyed patch 1k',
     iterations: 50,
     warmup: 5,
