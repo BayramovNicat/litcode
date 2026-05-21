@@ -14,6 +14,12 @@ const notify = (target: object) => {
   const subscribers = dependencies.get(target);
   if (!subscribers) return;
 
+  if (subscribers.size === 1) {
+    const first = subscribers.values().next().value;
+    if (first) first();
+    return;
+  }
+
   const pending = Array.from(subscribers);
   for (let index = 0; index < pending.length; index++) pending[index]();
 };
@@ -30,9 +36,9 @@ function cleanupObserver(observer: Subscriber): void {
   const sources = observerDependencies.get(observer);
   if (!sources) return;
 
-  sources.forEach((target) => {
+  for (const target of sources) {
     dependencies.get(target)?.delete(observer);
-  });
+  }
   sources.clear();
 }
 
@@ -105,6 +111,25 @@ const effectQueue = new Set<() => void>();
 let isFlushing = false;
 
 function flushQueue() {
+  const size = effectQueue.size;
+  if (size === 0) {
+    isFlushing = false;
+    return;
+  }
+
+  if (size === 1) {
+    const first = effectQueue.values().next().value;
+    effectQueue.clear();
+    if (first) first();
+    isFlushing = false;
+
+    if (effectQueue.size > 0) {
+      isFlushing = true;
+      scheduleMicrotask(flushQueue);
+    }
+    return;
+  }
+
   const pending = Array.from(effectQueue);
   effectQueue.clear();
 

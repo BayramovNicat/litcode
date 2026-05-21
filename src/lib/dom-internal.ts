@@ -87,25 +87,27 @@ export function patchNodesBeforeMarker(
   nextNodes: Node[],
   marker: Node,
 ): Node[] {
-  const patchedNodes: Node[] = [];
-  const length = Math.max(currentNodes.length, nextNodes.length);
+  const nextLen = nextNodes.length;
+  const currentLen = currentNodes.length;
+  const patchedNodes = new Array<Node>(nextLen);
+  const commonLen = currentLen < nextLen ? currentLen : nextLen;
 
-  for (let index = 0; index < length; index++) {
-    const current = currentNodes[index];
+  // 1. Patch common elements
+  for (let index = 0; index < commonLen; index++) {
+    patchedNodes[index] = patchNode(currentNodes[index], nextNodes[index]);
+  }
+
+  // 2. Append new elements
+  for (let index = commonLen; index < nextLen; index++) {
     const next = nextNodes[index];
+    parent.insertBefore(next, marker);
+    patchedNodes[index] = next;
+  }
 
-    if (!current && next) {
-      parent.insertBefore(next, marker);
-      patchedNodes.push(next);
-      continue;
-    }
-
-    if (current && !next) {
-      current.parentNode?.removeChild(current);
-      continue;
-    }
-
-    if (current && next) patchedNodes.push(patchNode(current, next));
+  // 3. Remove excess current elements
+  for (let index = commonLen; index < currentLen; index++) {
+    const current = currentNodes[index];
+    current.parentNode?.removeChild(current);
   }
 
   return patchedNodes;
