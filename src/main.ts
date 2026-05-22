@@ -1,5 +1,8 @@
 import { html, mount, repeat, type View } from './lib';
 import { Image } from './components/Image';
+import { Select } from './components/Select';
+import { Label } from './components/Label';
+
 import './style.css';
 
 type Photo = {
@@ -43,6 +46,12 @@ function PhotoCard(photo: Photo): View {
   `;
 }
 
+const selectList = [
+  { key: 'all', value: 'All' },
+  { key: '123', value: 'Books' },
+  { key: '234', value: 'None' },
+];
+
 function App(): View {
   return html`
     <main class="mx-auto min-h-screen w-full max-w-6xl px-4 py-8 text-foreground sm:px-6">
@@ -54,6 +63,20 @@ function App(): View {
           </p>
         </div>
         <span class="text-sm text-muted-foreground">${photos.length} images</span>
+        ${Label({
+          className: 'flex items-center gap-2',
+          children: [
+            'Select status:',
+            Select({
+              children: repeat(
+                selectList,
+                (item) => item.key,
+                (item) => html`<option value="${item.key}">${item.value}</option>`,
+              ),
+              oninput: console.log,
+            }),
+          ],
+        })}
       </header>
 
       <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
