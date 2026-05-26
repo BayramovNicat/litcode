@@ -2,6 +2,7 @@
   "name": "@holmityd/litcode",
   "version": "0.1.0",
   "description": "Tiny TypeScript-first frontend rendering primitives for template literals, components, keyed repeats, variants, and reactive runes.",
+  "author": "Bayramov Nicat",
   "type": "module",
   "license": "MIT",
   "publishConfig": {
