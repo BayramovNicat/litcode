@@ -5,16 +5,15 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "npm run dev -w apps/examples",
-    "dev:examples": "npm run dev -w apps/examples",
-    "dev:lib": "npm run dev -w packages/litcode",
-    "build": "npm run build -w packages/litcode",
-    "build:lib": "npm run build -w packages/litcode",
-    "test": "npm run test -w packages/litcode",
-    "test:lib": "npm run test -w packages/litcode",
-    "test:browser": "npm run test:browser -w packages/litcode",
-    "release": "npm run release -w packages/litcode",
-    "release:minor": "npm run release:minor -w packages/litcode",
-    "release:major": "npm run release:major -w packages/litcode"
+    "dev": "bun run --cwd apps/examples dev",
+    "dev:examples": "bun run --cwd apps/examples dev",
+    "build": "bun run --cwd packages/litcode build",
+    "build:lib": "bun run --cwd packages/litcode build",
+    "test": "bun run --cwd packages/litcode test",
+    "test:lib": "bun run --cwd packages/litcode test",
+    "test:browser": "bun run --cwd packages/litcode test:browser",
+    "release": "bun run --cwd packages/litcode release",
+    "release:minor": "bun run --cwd packages/litcode release:minor",
+    "release:major": "bun run --cwd packages/litcode release:major"
   }
 }
