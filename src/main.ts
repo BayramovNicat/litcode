@@ -158,25 +158,27 @@ function SelectedPhotoDialog(): View {
 
 function App(): View {
   return html`
-    <main class="mx-auto min-h-screen max-w-6xl px-4 py-6 sm:px-6">
-      <div class="mb-4 flex items-center justify-between gap-4">
-        ${Select({
-          items: filterList,
-          value: filter.value,
-          oninput: (event) => {
-            filter.value = (event.target as HTMLSelectElement).value as FilterValue;
-          },
-        })}
-        <span class="text-sm text-muted-foreground"
-          >${filteredPhotos.value.length} of ${photos.length}</span
-        >
+    <main class="min-h-screen bg-zinc-950 px-4 py-6 text-zinc-50 sm:px-6">
+      <div class="mx-auto max-w-6xl">
+        <div class="mb-4 flex items-center justify-between gap-4">
+          ${Select({
+            items: filterList,
+            value: filter.value,
+            oninput: (event) => {
+              filter.value = (event.target as HTMLSelectElement).value as FilterValue;
+            },
+          })}
+          <span class="text-sm text-muted-foreground"
+            >${filteredPhotos.value.length} of ${photos.length}</span
+          >
+        </div>
+
+        <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          ${repeat(filteredPhotos.value, (photo) => photo.id, PhotoItem)}
+        </section>
+
+        ${SelectedPhotoDialog()}
       </div>
-
-      <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        ${repeat(filteredPhotos.value, (photo) => photo.id, PhotoItem)}
-      </section>
-
-      ${SelectedPhotoDialog()}
     </main>
   `;
 }
