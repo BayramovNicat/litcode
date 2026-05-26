@@ -66,7 +66,7 @@ export function Image(props: ImageProps): View {
 
   applyImageProps(image, props);
   overrideElementMutationMethods(image);
-  registerImage(image);
+  queueMicrotask(() => registerImage(image));
 
   return image;
 }

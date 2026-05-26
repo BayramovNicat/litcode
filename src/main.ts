@@ -1,4 +1,5 @@
 import { $derived, $effect, $state, html, mount, repeat, type View } from './lib';
+import { Dialog } from './components/Dialog';
 import { Image } from './components/Image';
 import { Select } from './components/Select';
 
@@ -29,7 +30,7 @@ const filterList = [
 type FilterValue = (typeof filterList)[number];
 type CategoryValue = Exclude<FilterValue, 'all'>;
 
-const categories = filterList.filter((filter) => filter !== 'all') as CategoryValue[];
+const categories: CategoryValue[] = filterList.filter((filter) => filter !== 'all');
 const photos: Photo[] = Array.from({ length: 500 }, (_, index) => {
   const id = index + 1;
   const category = categories[index % categories.length];
@@ -42,17 +43,81 @@ const photos: Photo[] = Array.from({ length: 500 }, (_, index) => {
 });
 
 const filter = $state<FilterValue>('all');
+const selectedPhoto = $state<Photo | null>(null);
 const filteredPhotos = $derived(() =>
   filter.value === 'all' ? photos : photos.filter((photo) => photo.filter === filter.value),
 );
 
-function PhotoImage(photo: Photo): View {
-  return Image({
-    src: photo.src,
-    alt: `${photo.filter} photo ${photo.id}`,
-    width: 450,
-    height: 300,
-    className: 'aspect-3/2 w-full rounded-md object-cover',
+function highResPhotoSrc(photo: Photo): string {
+  return `https://loremflickr.com/1200/800/${photo.filter}?lock=${photo.id}`;
+}
+
+function PhotoItem(photo: Photo): View {
+  return html`<button
+    class="group block overflow-hidden rounded-md text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+    type="button"
+    onclick="${() => {
+      selectedPhoto.value = photo;
+    }}"
+  >
+    ${Image({
+      src: photo.src,
+      alt: `${photo.filter} photo ${photo.id}`,
+      width: 450,
+      height: 300,
+      className:
+        'aspect-3/2 w-full rounded-md object-cover transition-transform duration-300 group-hover:scale-105',
+    })}
+  </button>`;
+}
+
+function SelectedPhotoDialog(): View {
+  const photo = selectedPhoto.value;
+  const title = photo ? `${photo.filter} photo ${photo.id}` : '';
+
+  return Dialog({
+    open: photo !== null,
+    onclose: () => {
+      selectedPhoto.value = null;
+    },
+    children: html`<div class="grid gap-4 p-4 sm:p-6">
+      <div class="flex items-center justify-between gap-4">
+        <h2 class="text-lg leading-none font-semibold">${title}</h2>
+        <button
+          type="button"
+          class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+          aria-label="Close"
+          onclick="${(event: Event) => {
+            (event.currentTarget as HTMLButtonElement).closest('dialog')?.close();
+          }}"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="size-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
+        </button>
+      </div>
+      ${photo
+        ? Image({
+            src: highResPhotoSrc(photo),
+            alt: title,
+            width: 1200,
+            height: 800,
+            loading: 'eager',
+            className: 'aspect-3/2 max-h-[calc(100dvh-9rem)] w-full rounded-md object-contain',
+          })
+        : ''}
+    </div>`,
   });
 }
 
@@ -73,8 +138,10 @@ function App(): View {
       </div>
 
       <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        ${repeat(filteredPhotos.value, (photo) => photo.id, PhotoImage)}
+        ${repeat(filteredPhotos.value, (photo) => photo.id, PhotoItem)}
       </section>
+
+      ${SelectedPhotoDialog()}
     </main>
   `;
 }
@@ -84,5 +151,6 @@ let mounted = false;
 
 $effect(() => {
   filter.value;
+  selectedPhoto.value;
   mounted ? root.update(App()) : (mounted = true);
 });
