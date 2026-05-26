@@ -52,6 +52,25 @@ function highResPhotoSrc(photo: Photo): string {
   return `https://loremflickr.com/1200/800/${photo.filter}?lock=${photo.id}`;
 }
 
+function selectRelativePhoto(offset: number): void {
+  const index = filteredPhotos.value.findIndex((i) => i.src === selectedPhoto.value?.src);
+  const target = filteredPhotos.value[index + offset];
+  if (target) selectedPhoto.value = target;
+}
+
+function nextImage() {
+  selectRelativePhoto(1);
+}
+
+function prevImage() {
+  selectRelativePhoto(-1);
+}
+
+function handlePhotoDialogKeydown(event: KeyboardEvent): void {
+  if (event.key === 'ArrowLeft') prevImage();
+  if (event.key === 'ArrowRight') nextImage();
+}
+
 function PhotoItem(photo: Photo): View {
   return html`<button
     class="group block overflow-hidden rounded-md text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -107,6 +126,22 @@ function SelectedPhotoDialog(): View {
           </svg>
         </button>
       </div>
+      <div class="flex items-center justify-between gap-2">
+        <button
+          class="inline-flex h-9 items-center justify-center rounded-md border bg-background px-4 text-sm font-medium shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+          type="button"
+          onclick="${prevImage}"
+        >
+          Prev
+        </button>
+        <button
+          class="inline-flex h-9 items-center justify-center rounded-md border bg-background px-4 text-sm font-medium shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+          type="button"
+          onclick="${nextImage}"
+        >
+          Next
+        </button>
+      </div>
       ${photo
         ? Image({
             src: highResPhotoSrc(photo),
@@ -153,4 +188,11 @@ $effect(() => {
   filter.value;
   selectedPhoto.value;
   mounted ? root.update(App()) : (mounted = true);
+});
+
+$effect(() => {
+  if (!selectedPhoto.value) return;
+
+  document.addEventListener('keydown', handlePhotoDialogKeydown);
+  return () => document.removeEventListener('keydown', handlePhotoDialogKeydown);
 });
