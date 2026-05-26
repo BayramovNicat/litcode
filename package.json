@@ -1,16 +1,19 @@
 {
   "name": "@holmityd/litcode",
   "version": "0.1.0",
-  "description": "Tiny TypeScript-first frontend rendering primitives.",
+  "description": "Tiny TypeScript-first frontend rendering primitives for template literals, components, keyed repeats, variants, and reactive runes.",
   "type": "module",
   "license": "MIT",
-  "homepage": "https://github.com/holmityd/litcode#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://github.com/BayramovNicat/litcode#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/holmityd/litcode.git"
+    "url": "git+https://github.com/BayramovNicat/litcode.git"
   },
   "bugs": {
-    "url": "https://github.com/holmityd/litcode/issues"
+    "url": "https://github.com/BayramovNicat/litcode/issues"
   },
   "keywords": [
     "dom",

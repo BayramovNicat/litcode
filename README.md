@@ -8,12 +8,6 @@ Tiny TypeScript-first frontend rendering primitives for building DOM views with 
 npm install @holmityd/litcode
 ```
 
-With JSR:
-
-```sh
-npx jsr add @holmityd/litcode
-```
-
 ## Examples
 
 ### Render and update a view
@@ -304,11 +298,3 @@ npm publish --access public
 ```
 
 `prepublishOnly` runs tests and the library build automatically before `npm publish`.
-
-## Publish to JSR
-
-Make sure the scope in `jsr.json` exists on JSR, then run:
-
-```sh
-npx jsr publish
-```
