@@ -23,6 +23,7 @@ export default defineConfig(({ command, mode }) => {
         target: 'esnext',
         lib: {
           entry: {
+            cli: fileURLToPath(new URL('./src/cli.ts', import.meta.url)),
             index: fileURLToPath(new URL('./src/lib/index.ts', import.meta.url)),
             core: fileURLToPath(new URL('./src/lib/core.ts', import.meta.url)),
             variants: fileURLToPath(new URL('./src/lib/variants.ts', import.meta.url)),
@@ -31,7 +32,15 @@ export default defineConfig(({ command, mode }) => {
           fileName: (_format, entryName) => `${entryName}.js`,
         },
         rollupOptions: {
-          external: ['clsx', 'tailwind-merge'],
+          external: [
+            'node:fs',
+            'node:fs/promises',
+            'node:os',
+            'node:path',
+            'node:url',
+            'clsx',
+            'tailwind-merge',
+          ],
         },
       },
     };

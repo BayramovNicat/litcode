@@ -1,9 +1,3 @@
----
-description: Frontend code style for the Litcode TypeScript DOM primitives project.
-globs: 'packages/litcode/src/**/*.ts, packages/litcode/tests/**/*.ts, packages/litcode/benchmarks/**/*.ts, apps/examples/src/**/*.ts, apps/examples/src/**/*.css, apps/examples/*.html'
-alwaysApply: false
----
-
 # Frontend Code Style
 
 This project is a tiny TypeScript-first DOM rendering library. Write frontend code in the local Litcode style: template literals, typed components, Tailwind utilities, and small reactive primitives. Do not introduce React, JSX, Svelte, Vue, or a new component runtime unless the task explicitly asks for it.

@@ -26,3 +26,21 @@ Runtime note: without a compiler, browser-style string handlers like
 `onclick="count + 1"` cannot safely close over TypeScript variables. Interpolate typed
 values instead: `onclick=${() => count.value++}`. Dynamic attribute/event
 interpolations can be quoted or unquoted.
+
+## Agent Rules
+
+Install Litcode coding-agent instructions into another project:
+
+```sh
+bunx @holmityd/litcode init
+```
+
+The initializer writes Cursor, Codex, Claude Code, GitHub Copilot, and Antigravity
+rule files by default. Limit targets when needed:
+
+```sh
+bunx @holmityd/litcode agents cursor,codex,claude
+bunx @holmityd/litcode init --tools copilot,antigravity --cwd ../my-app
+```
+
+Existing files are skipped unless `--force` is passed.

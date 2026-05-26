@@ -1,6 +1,6 @@
 {
   "name": "@holmityd/litcode",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Tiny TypeScript-first frontend rendering primitives for template literals, components, keyed repeats, variants, and reactive runes.",
   "author": "Bayramov Nicat",
   "type": "module",
@@ -25,8 +25,12 @@
     "ui"
   ],
   "sideEffects": false,
+  "bin": {
+    "litcode": "./dist/cli.js"
+  },
   "files": [
     "dist",
+    "templates",
     "README.md"
   ],
   "main": "./dist/index.js",
@@ -48,7 +52,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && tsc -p tsconfig.build.json",
+    "build": "vite build && node scripts/chmod-cli.mjs && tsc -p tsconfig.build.json",
     "build:demo": "tsc && vite build --mode demo",
     "release": "npm version patch",
     "release:minor": "npm version minor",
