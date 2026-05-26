@@ -2,6 +2,9 @@
 
 Tiny TypeScript-first frontend rendering primitives for building DOM views with template literals, components, keyed repeats, variants, and small reactive runes.
 
+[![npm version](https://img.shields.io/npm/v/%40holmityd%2Flitcode.svg)](https://www.npmjs.com/package/@holmityd/litcode)
+[![npm downloads](https://img.shields.io/npm/dm/%40holmityd%2Flitcode.svg)](https://www.npmjs.com/package/@holmityd/litcode)
+
 ## Install
 
 ```sh
