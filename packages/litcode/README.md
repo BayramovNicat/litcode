@@ -3,22 +3,34 @@
 Tiny TypeScript-first frontend rendering primitives:
 
 ```ts
-import { $derived, $effect, $state, component, html, mount } from './lib';
+import { $derived, $effect, $state, cn, component, html, mount, type Props } from '@holmityd/litcode';
 
-const Button = component<{ label: string; onclick: () => void }>(
-  (props) => html` <button onclick="${props.onclick}">${props.label}</button> `,
+type ButtonProps = Props<Partial<HTMLButtonElement>>;
+
+const Button = component(
+  ({ children, className }: ButtonProps = {}) =>
+    html` <button class="${cn('rounded-md border px-3 py-2', className)}">${children ?? ''}</button> `,
 );
 
 const count = $state(0);
 const doubled = $derived(() => count.value * 2);
 
-const root = mount(html`${Button({ label: 'count', onclick: () => count.value++ })}`, app);
+function App() {
+  return html`
+    ${Button({ onclick: () => count.value++, children: `count ${count.value}` })}
+    <button onclick=${() => count.value--}>decrement</button>
+    <p>${doubled.value}</p>
+  `;
+}
+
+const app = document.getElementById('app');
+
+if (!app) throw new Error('App root not found.');
+
+const root = mount(App(), app);
 
 $effect(() => {
-  root.update(html`
-    ${Button({ label: `count ${count.value}`, onclick: () => count.value++ })}
-    <p>${doubled.value}</p>
-  `);
+  root.update(App());
 });
 ```
 
