@@ -3,7 +3,9 @@ import {
   isTemplateResult,
   normalize,
   findChildPartBefore,
+  hasSameTemplateShape,
   patchNodesBeforeMarker,
+  replaceNodesBeforeMarker,
   resetChildPart,
 } from './dom-internal';
 import {
@@ -74,7 +76,11 @@ export function updateChildPart(part: ChildPart, value: unknown): void {
     return;
   }
 
-  if (part.instance && isTemplateResult(value) && part.instance.result.strings === value.strings) {
+  if (
+    part.instance &&
+    isTemplateResult(value) &&
+    hasSameTemplateShape(part.instance.result, value)
+  ) {
     updateTemplateInstance(part.instance, value);
     part.nodes = part.instance.nodes;
     destroyRepeatPart(part);
@@ -94,7 +100,12 @@ export function updateChildPart(part: ChildPart, value: unknown): void {
   if (previousInstance && previousInstance !== instance) destroyTemplateInstance(previousInstance);
   destroyTemplateArrayInstances(previousArray);
 
-  resetChildPart(part, patchNodesBeforeMarker(parent, part.nodes, nodes, part.marker), instance);
+  const shouldReplaceTemplate = isTemplateResult(value) && instance && instance.parts.length > 0;
+  const nextNodes = shouldReplaceTemplate
+    ? replaceNodesBeforeMarker(parent, part.nodes, nodes, part.marker)
+    : patchNodesBeforeMarker(parent, part.nodes, nodes, part.marker);
+
+  resetChildPart(part, nextNodes, shouldReplaceTemplate ? instance : undefined);
 }
 
 function updateTemplateArrayChildPart(part: ChildPart, value: unknown): boolean {
@@ -113,7 +124,7 @@ function updateTemplateArrayChildPart(part: ChildPart, value: unknown): boolean 
   if (current && current.length === length) {
     let canUpdate = true;
     for (let index = 0; index < length; index++) {
-      if (current[index].result.strings !== value[index].strings) {
+      if (!hasSameTemplateShape(current[index].result, value[index])) {
         canUpdate = false;
         break;
       }
@@ -133,15 +144,20 @@ function updateTemplateArrayChildPart(part: ChildPart, value: unknown): boolean 
   const previous = part.array?.instances;
   const instances = new Array<TemplateInstance>(length);
   const nodes: Node[] = [];
+  let hasDynamicInstances = false;
 
   for (let index = 0; index < length; index++) {
     const instance = instantiateTemplate(value[index]);
     instances[index] = instance;
+    if (instance.parts.length > 0) hasDynamicInstances = true;
     for (let nodeIndex = 0; nodeIndex < instance.nodes.length; nodeIndex++)
       nodes.push(instance.nodes[nodeIndex]);
   }
 
-  const patchedNodes = patchNodesBeforeMarker(parent, part.nodes, nodes, part.marker);
+  const patchedNodes =
+    hasDynamicInstances && part.nodes.length > 0
+      ? replaceNodesBeforeMarker(parent, part.nodes, nodes, part.marker)
+      : patchNodesBeforeMarker(parent, part.nodes, nodes, part.marker);
   destroyTemplateArrayInstances(previous);
 
   part.nodes = patchedNodes;

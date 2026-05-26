@@ -1,5 +1,5 @@
 import type { MountHandle, View, TemplateResult } from './types';
-import { isTemplateResult, normalize } from './dom-internal';
+import { hasSameTemplateShape, isTemplateResult, normalize } from './dom-internal';
 import {
   updateTemplateInstance,
   instantiateTemplate,
@@ -17,7 +17,7 @@ export function render(view: View, target: ParentNode): MountHandle {
       if (
         rootInstance &&
         isTemplateResult(next) &&
-        rootInstance.result.strings === (next as TemplateResult).strings
+        hasSameTemplateShape(rootInstance.result, next as TemplateResult)
       ) {
         updateTemplateInstance(rootInstance, next as TemplateResult);
         return;
@@ -29,8 +29,13 @@ export function render(view: View, target: ParentNode): MountHandle {
 
       if (isTemplateResult(next)) {
         const nextInstance = instantiateTemplate(next as TemplateResult);
-        patchChildren(parent, nextInstance.nodes);
-        rootInstance = nextInstance;
+        if (nextInstance.parts.length === 0) {
+          patchChildren(parent, nextInstance.nodes);
+          rootInstance = undefined;
+        } else {
+          replaceChildren(parent, nextInstance.fragment);
+          rootInstance = nextInstance;
+        }
         return;
       }
 

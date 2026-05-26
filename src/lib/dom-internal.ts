@@ -13,6 +13,17 @@ export function isTemplateResult(value: unknown): value is TemplateResult {
   );
 }
 
+export function hasSameTemplateShape(left: TemplateResult, right: TemplateResult): boolean {
+  if (left.strings === right.strings) return true;
+  if (left.strings.length !== right.strings.length) return false;
+
+  for (let index = 0; index < left.strings.length; index++) {
+    if (left.strings[index] !== right.strings[index]) return false;
+  }
+
+  return true;
+}
+
 export function isRepeatResult(value: unknown): value is RepeatResult {
   return !!value && typeof value === 'object' && (value as RepeatResult).__litcodeRepeat === true;
 }
@@ -111,6 +122,26 @@ export function patchNodesBeforeMarker(
   }
 
   return patchedNodes;
+}
+
+export function replaceNodesBeforeMarker(
+  parent: Node,
+  currentNodes: Node[],
+  nextNodes: Node[],
+  marker: Node,
+): Node[] {
+  const fragment = document.createDocumentFragment();
+
+  for (let index = 0; index < nextNodes.length; index++) fragment.appendChild(nextNodes[index]);
+
+  parent.insertBefore(fragment, marker);
+
+  for (let index = 0; index < currentNodes.length; index++) {
+    const current = currentNodes[index];
+    if (current.parentNode === parent) parent.removeChild(current);
+  }
+
+  return nextNodes;
 }
 
 export function findChildPartBefore(nodes: Node[], fallbackParent: Node): ChildPart | undefined {

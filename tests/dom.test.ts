@@ -404,4 +404,70 @@ describe('dom patching', () => {
 
     assert.equal(app.textContent, '');
   });
+
+  it('updates live DOM after switching root template shapes', () => {
+    const app = setupDom();
+    const calls: string[] = [];
+    const first = (handler: () => void, label: string) =>
+      html`<button onclick=${handler}>${label}</button>`;
+    const second = (handler: () => void, label: string) =>
+      html`<button class="next" onclick=${handler}>${label}</button>`;
+    const handle = mount(
+      first(() => calls.push('first'), 'First'),
+      app,
+    );
+
+    handle.update(second(() => calls.push('second'), 'Second'));
+    app.querySelector('button')!.click();
+
+    handle.update(second(() => calls.push('third'), 'Third'));
+    app.querySelector('button')!.click();
+
+    assert.equal(app.innerHTML, '<button class="next">Third<!--litcode-part-1--></button>');
+    assert.deepEqual(calls, ['second', 'third']);
+  });
+
+  it('updates live DOM after switching child template shapes', () => {
+    const app = setupDom();
+    const first = (label: string) => html`<span>${label}</span>`;
+    const second = (label: string) => html`<strong>${label}</strong>`;
+    const view = (child: unknown) => html`<p>${child}</p>`;
+    const handle = mount(view(first('First')), app);
+
+    handle.update(view(second('Second')));
+    handle.update(view(second('Third')));
+
+    assert.equal(
+      app.innerHTML,
+      '<p><strong>Third<!--litcode-part-0--></strong><!--litcode-part-0--></p>',
+    );
+  });
+
+  it('updates live DOM after switching template array shapes', () => {
+    const app = setupDom();
+    const first = (label: string) => html`<span>${label}</span>`;
+    const second = (label: string) => html`<strong>${label}</strong>`;
+    const view = (items: unknown[]) => html`<p>${items}</p>`;
+    const handle = mount(view([first('First')]), app);
+
+    handle.update(view([second('Second')]));
+    handle.update(view([second('Third')]));
+
+    assert.equal(
+      app.innerHTML,
+      '<p><strong>Third<!--litcode-part-0--></strong><!--litcode-part-0--></p>',
+    );
+  });
+
+  it('removes template event listeners on destroy', () => {
+    const app = setupDom();
+    let calls = 0;
+    const handle = mount(html`<button onclick=${() => calls++}>Go</button>`, app);
+    const button = app.querySelector('button')!;
+
+    handle.destroy();
+    button.click();
+
+    assert.equal(calls, 0);
+  });
 });

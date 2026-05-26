@@ -276,6 +276,13 @@ export function destroyTemplateInstance(instance: TemplateInstance): void {
 
     if (part.kind === 'event') {
       const eventPart = part as EventPart;
+      if (eventPart.listener) {
+        eventPart.element.removeEventListener(eventPart.name, eventPart.listener);
+        eventPart.listener = undefined;
+      }
+      const element = eventPart.element as LitcodeElement;
+      if (element.__litcodeEvents) delete element.__litcodeEvents[eventPart.name];
+      if (element.__litcodeListeners) delete element.__litcodeListeners[eventPart.name];
       eventPart.value = undefined;
     }
 
