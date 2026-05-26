@@ -7,6 +7,11 @@ import {
 } from './dom-template';
 import { patchChildren } from './patch';
 
+/**
+ * Renders a `View` into a target node and returns an update handle.
+ *
+ * Subsequent calls to `update()` reuse existing DOM where possible.
+ */
 export function render(view: View, target: ParentNode): MountHandle {
   const parent = target as unknown as HTMLElement;
   let rootInstance = isTemplateResult(view) ? instantiateTemplate(view) : undefined;
@@ -50,20 +55,36 @@ export function render(view: View, target: ParentNode): MountHandle {
   };
 }
 
+/**
+ * Alias for {@link render}.
+ *
+ * `mount` and `render` share the same behavior and return the same handle.
+ */
 export function mount(view: View, target: ParentNode): MountHandle {
   return render(view, target);
 }
 
+/**
+ * Converts a `View` into a detached `DocumentFragment`.
+ *
+ * This is useful when you need DOM nodes without mounting them yet.
+ */
 export function toFragment(view: View): DocumentFragment {
   return makeFragment(view);
 }
 
+/**
+ * Converts a `View` into a detached `DocumentFragment`.
+ */
 export function makeFragment(view: View): DocumentFragment {
   const fragment = document.createDocumentFragment();
   append(fragment, view);
   return fragment;
 }
 
+/**
+ * Appends a `View` into an existing node.
+ */
 export function append(parent: Node, view: View) {
   appendNodes(parent, normalize(view));
 }

@@ -67,8 +67,26 @@ function hasRootProps(props: object): boolean {
   return false;
 }
 
+/**
+ * Wraps a render function so it can receive DOM-like props and children.
+ *
+ * The returned component renders a `View`, then applies any root props
+ * such as DOM properties, `dataset`, and `style` to the first rendered element.
+ */
 export function component(render: () => View): Component;
+/**
+ * Wraps a render function so it can receive typed props and children.
+ *
+ * The returned component renders a `View`, then applies any root props
+ * such as DOM properties, `dataset`, and `style` to the first rendered element.
+ */
 export function component<Props extends object>(render: (props: Props) => View): Component<Props>;
+/**
+ * Wraps a render function so it can receive typed props and children.
+ *
+ * The returned component renders a `View`, then applies any root props
+ * such as DOM properties, `dataset`, and `style` to the first rendered element.
+ */
 export function component<Props extends object>(render: (props: Props) => View): Component<Props> {
   return ((props?: Props) => {
     const nextProps = (props ?? {}) as Props;
@@ -85,15 +103,33 @@ export function component<Props extends object>(render: (props: Props) => View):
   }) as Component<Props>;
 }
 
+/**
+ * Invokes a component with props and optional children.
+ *
+ * This is useful when you want the component call site to read like a JSX
+ * element while staying in plain TypeScript.
+ */
 export function createElement<Props extends object>(
   Component: Component<Props>,
   props: Props,
 ): View;
+/**
+ * Invokes a component with props and optional children.
+ *
+ * This is useful when you want the component call site to read like a JSX
+ * element while staying in plain TypeScript.
+ */
 export function createElement<Props extends object>(
   Component: Component<Props>,
   props: Props,
   children: Children,
 ): View;
+/**
+ * Invokes a component with props and optional children.
+ *
+ * This is useful when you want the component call site to read like a JSX
+ * element while staying in plain TypeScript.
+ */
 export function createElement<Props extends object>(
   Component: Component<Props & { children?: Children }>,
   props: Props,

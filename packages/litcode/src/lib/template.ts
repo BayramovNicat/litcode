@@ -109,6 +109,12 @@ export const booleanSelector = booleanAttributeNames
 export const keySelector = '[key]';
 export const markerPrefix = 'litcode-part-';
 
+/**
+ * Creates a Litcode template from a tagged template literal.
+ *
+ * Dynamic values may be DOM nodes, nested templates, lists, booleans,
+ * strings, numbers, or reactive values.
+ */
 export function html(strings: TemplateStringsArray, ...values: TemplateValue[]): TemplateResult {
   return {
     __litcodeTemplate: true,
@@ -117,6 +123,11 @@ export function html(strings: TemplateStringsArray, ...values: TemplateValue[]):
   };
 }
 
+/**
+ * Creates a keyed repeat block for rendering ordered lists.
+ *
+ * Keys are used to preserve and move DOM nodes during reordering.
+ */
 export function repeat<Item>(
   items: readonly Item[],
   key: (item: Item, index: number) => string | number,

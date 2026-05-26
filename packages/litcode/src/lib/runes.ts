@@ -42,16 +42,25 @@ function cleanupObserver(observer: Subscriber): void {
   sources.clear();
 }
 
+/**
+ * A small reactive value with subscription support.
+ */
 export type Rune<T> = {
   __litcodeRune: true;
   value: T;
   subscribe(subscriber: Subscriber): () => void;
 };
 
+/**
+ * Returns `true` when a value is a Litcode rune.
+ */
 export function isRune(value: unknown): value is Rune<unknown> {
   return typeof value === 'object' && value !== null && (value as any).__litcodeRune === true;
 }
 
+/**
+ * Creates a mutable reactive state value.
+ */
 export function $state<T>(initial: T): Rune<T> {
   const target = { value: initial };
 
@@ -75,6 +84,9 @@ export function $state<T>(initial: T): Rune<T> {
   };
 }
 
+/**
+ * Creates a readonly rune derived from other reactive values.
+ */
 export function $derived<T>(compute: () => T): Rune<T> {
   const state = $state<T>(undefined as T);
 
@@ -145,6 +157,11 @@ function flushQueue() {
   }
 }
 
+/**
+ * Runs an effect and re-runs it when its dependencies change.
+ *
+ * Returns a disposer that stops future re-runs and performs cleanup.
+ */
 export function $effect(run: () => void | (() => void)): () => void {
   let cleanup: void | (() => void);
   let disposed = false;
