@@ -1,4 +1,4 @@
-import { html, cn, repeat, type View, type Props, component } from '../lib';
+import { html, cn, repeat, type View, type Props, component } from '@holmityd/litcode';
 
 type SelectOptionValue = string | number;
 

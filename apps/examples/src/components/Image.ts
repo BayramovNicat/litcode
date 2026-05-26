@@ -1,4 +1,4 @@
-import { cn, type Props, type View } from '@/lib';
+import { cn, type Props, type View } from '@holmityd/litcode';
 
 const MAX_CONCURRENT = 8;
 const ROOT_MARGIN = '200px 0px';

@@ -1,87 +1,20 @@
 {
-  "name": "@holmityd/litcode",
-  "version": "0.1.0",
-  "description": "Tiny TypeScript-first frontend rendering primitives for template literals, components, keyed repeats, variants, and reactive runes.",
-  "author": "Bayramov Nicat",
-  "type": "module",
-  "license": "MIT",
-  "publishConfig": {
-    "access": "public"
-  },
-  "homepage": "https://github.com/BayramovNicat/litcode#readme",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/BayramovNicat/litcode.git"
-  },
-  "bugs": {
-    "url": "https://github.com/BayramovNicat/litcode/issues"
-  },
-  "keywords": [
-    "dom",
-    "frontend",
-    "html",
-    "template",
-    "typescript",
-    "ui"
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
   ],
-  "sideEffects": false,
-  "files": [
-    "dist",
-    "README.md"
-  ],
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./core": {
-      "types": "./dist/core.d.ts",
-      "import": "./dist/core.js"
-    },
-    "./variants": {
-      "types": "./dist/variants.d.ts",
-      "import": "./dist/variants.js"
-    }
-  },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build && tsc -p tsconfig.build.json",
-    "build:demo": "tsc && vite build --mode demo",
-    "release": "npm version patch",
-    "release:minor": "npm version minor",
-    "release:major": "npm version major",
-    "vercel-build": "npm run build:demo",
-    "prepublishOnly": "npm run test && npm run build",
-    "preview": "vite preview",
-    "size": "node scripts/size.mjs",
-    "size:build": "npm run build && npm run size",
-    "test": "node --import tsx --test tests/**/*.test.ts",
-    "test:all": "npm run test && npm run test:browser",
-    "test:browser": "tsx tests/run-browser-tests.ts",
-    "bench": "tsx benchmarks/dom.bench.ts",
-    "bench:lit-html": "tsx benchmarks/lit-html.bench.ts",
-    "bench:browser": "tsx benchmarks/run-browser-bench.ts",
-    "format": "prettier . --write",
-    "format:check": "prettier . --check"
-  },
-  "dependencies": {
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^3.6.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.3.0",
-    "@types/jsdom": "^28.0.3",
-    "@types/node": "^25.8.0",
-    "jsdom": "^29.1.1",
-    "lit-html": "^3.3.3",
-    "prettier": "^3.8.3",
-    "prettier-plugin-tailwindcss": "^0.8.0",
-    "tailwindcss": "^4.3.0",
-    "tsx": "^4.22.0",
-    "typescript": "~6.0.2",
-    "vite": "^8.0.12"
+    "dev": "npm run dev -w apps/examples",
+    "dev:examples": "npm run dev -w apps/examples",
+    "dev:lib": "npm run dev -w packages/litcode",
+    "build": "npm run build -w packages/litcode",
+    "build:lib": "npm run build -w packages/litcode",
+    "test": "npm run test -w packages/litcode",
+    "test:lib": "npm run test -w packages/litcode",
+    "test:browser": "npm run test:browser -w packages/litcode",
+    "release": "npm run release -w packages/litcode",
+    "release:minor": "npm run release:minor -w packages/litcode",
+    "release:major": "npm run release:major -w packages/litcode"
   }
 }

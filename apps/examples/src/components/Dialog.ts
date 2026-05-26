@@ -1,5 +1,5 @@
-import { toFragment } from '@/lib/dom-api';
-import { cn, component, html, type Props, type View } from '@/lib';
+import { toFragment } from '@holmityd/litcode/core';
+import { cn, component, html, type Props, type View } from '@holmityd/litcode';
 
 export type DialogProps = Props<Partial<HTMLDialogElement>>;
 
