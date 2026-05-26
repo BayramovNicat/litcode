@@ -178,7 +178,7 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
           part.cleanup = undefined;
         }
         part.source = undefined;
-        if ((part as AttributePart).value !== rawValue) {
+        if (shouldUpdateAttributePart(part as AttributePart, rawValue)) {
           setAttributeValue(part.element, (part as AttributePart).name, rawValue);
           (part as AttributePart).value = rawValue;
         }
@@ -203,7 +203,7 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
           part.source = rawValue;
           part.cleanup = $effect(() => {
             const resolvedValue = isRuneVal ? (rawValue as any).value : (rawValue as Function)();
-            if ((part as AttributePart).value !== resolvedValue) {
+            if (shouldUpdateAttributePart(part as AttributePart, resolvedValue)) {
               setAttributeValue(part.element, (part as AttributePart).name, resolvedValue);
               (part as AttributePart).value = resolvedValue;
             }
@@ -215,7 +215,7 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
           part.cleanup = undefined;
         }
         part.source = undefined;
-        if ((part as AttributePart).value !== rawValue) {
+        if (shouldUpdateAttributePart(part as AttributePart, rawValue)) {
           setAttributeValue(part.element, (part as AttributePart).name, rawValue);
           (part as AttributePart).value = rawValue;
         }
@@ -440,6 +440,12 @@ function markerIndexFromAttributeValue(value: string): number | undefined {
 
   const index = Number(value.slice(markerPrefix.length));
   return Number.isInteger(index) ? index : undefined;
+}
+
+function shouldUpdateAttributePart(part: AttributePart, value: unknown): boolean {
+  return (
+    part.value !== value || part.element.getAttribute(part.name)?.startsWith(markerPrefix) === true
+  );
 }
 
 function hasBooleanAttributeMarkers(root: ParentNode): boolean {

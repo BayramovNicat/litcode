@@ -225,6 +225,32 @@ describe('dom patching', () => {
     assert.equal(select.value, 'c');
   });
 
+  it('cleans up undefined dynamic attributes in repeated options', () => {
+    const app = setupDom();
+    const items = [{ key: 'all', value: 'All' }];
+
+    mount(
+      html`<select>
+        ${repeat(
+          items,
+          (item) => item.key,
+          (item) => html`
+            <option value="${item.key}" disabled="${undefined}" selected="${undefined}">
+              ${item.value}
+            </option>
+          `,
+        )}
+      </select>`,
+      app,
+    );
+
+    const option = app.querySelector('option')!;
+    assert.equal(option.value, 'all');
+    assert.equal(option.hasAttribute('disabled'), false);
+    assert.equal(option.hasAttribute('selected'), false);
+    assert.equal(option.textContent?.trim(), 'All');
+  });
+
   it('supports dynamic attributes inside quoted attributes', () => {
     const app = setupDom();
     const handle = mount(html`<button class="${'first'}">Go</button>`, app);

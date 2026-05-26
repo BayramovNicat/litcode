@@ -1,93 +1,88 @@
-import { html, mount, repeat, type View } from './lib';
+import { $derived, $effect, $state, html, mount, repeat, type View } from './lib';
 import { Image } from './components/Image';
 import { Select } from './components/Select';
-import { Label } from './components/Label';
 
 import './style.css';
 
 type Photo = {
   id: number;
-  seed: string;
+  filter: CategoryValue;
+  src: string;
 };
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('App root not found.');
 
-const PHOTO_COUNT = 1000;
-const photos: Photo[] = Array.from({ length: PHOTO_COUNT }, (_, index) => ({
-  id: index + 1,
-  seed: crypto.randomUUID(),
-}));
+const filterList = [
+  'all',
+  'nature',
+  'city',
+  'people',
+  'animals',
+  'food',
+  'architecture',
+  'travel',
+  'sports',
+  'technology',
+] as const;
 
-function randomImageUrl(seed: string): string {
-  return `https://picsum.photos/seed/${seed}/450/300`;
+type FilterValue = (typeof filterList)[number];
+type CategoryValue = Exclude<FilterValue, 'all'>;
+
+const categories = filterList.filter((filter) => filter !== 'all') as CategoryValue[];
+const photos: Photo[] = Array.from({ length: 500 }, (_, index) => {
+  const id = index + 1;
+  const category = categories[index % categories.length];
+
+  return {
+    id,
+    filter: category,
+    src: `https://loremflickr.com/450/300/${category}?lock=${id}`,
+  };
+});
+
+const filter = $state<FilterValue>('all');
+const filteredPhotos = $derived(() =>
+  filter.value === 'all' ? photos : photos.filter((photo) => photo.filter === filter.value),
+);
+
+function PhotoImage(photo: Photo): View {
+  return Image({
+    src: photo.src,
+    alt: `${photo.filter} photo ${photo.id}`,
+    width: 450,
+    height: 300,
+    className: 'aspect-3/2 w-full rounded-md object-cover',
+  });
 }
-
-function PhotoCard(photo: Photo): View {
-  return html`
-    <article class="content-auto overflow-hidden rounded-md border border-border bg-card shadow-xs">
-      <div class="aspect-3/2 bg-muted">
-        ${Image({
-          src: randomImageUrl(photo.seed),
-          alt: `Random photo ${photo.id}`,
-          width: 450,
-          height: 300,
-          className: 'h-full w-full object-cover',
-        })}
-      </div>
-      <div class="flex items-start justify-between gap-3 border-t border-border p-3">
-        <div class="min-w-0">
-          <h2 class="truncate text-sm font-semibold">Random Photo</h2>
-          <p class="mt-1 text-xs text-muted-foreground">450x300</p>
-        </div>
-        <span class="text-xs tabular-nums text-muted-foreground">#${photo.id}</span>
-      </div>
-    </article>
-  `;
-}
-
-const selectList = [
-  { key: 'all', value: 'All' },
-  { key: '123', value: 'Books' },
-  { key: '234', value: 'None' },
-];
 
 function App(): View {
   return html`
-    <main class="mx-auto min-h-screen w-full max-w-6xl px-4 py-8 text-foreground sm:px-6">
-      <header class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 class="text-2xl font-semibold tracking-normal">Random Image Feed</h1>
-          <p class="mt-1 text-sm text-muted-foreground">
-            Each card requests a random 450x300 image through the lazy Image component.
-          </p>
-        </div>
-        <span class="text-sm text-muted-foreground">${photos.length} images</span>
-        ${Label({
-          className: 'flex items-center gap-2',
-          children: [
-            'Select status:',
-            Select({
-              children: repeat(
-                selectList,
-                (item) => item.key,
-                (item) => html`<option value="${item.key}">${item.value}</option>`,
-              ),
-              oninput: console.log,
-            }),
-          ],
+    <main class="mx-auto min-h-screen max-w-6xl px-4 py-6 sm:px-6">
+      <div class="mb-4 flex items-center justify-between gap-4">
+        ${Select({
+          items: filterList,
+          value: filter.value,
+          oninput: (event) => {
+            filter.value = (event.target as HTMLSelectElement).value as FilterValue;
+          },
         })}
-      </header>
+        <span class="text-sm text-muted-foreground"
+          >${filteredPhotos.value.length} of ${photos.length}</span
+        >
+      </div>
 
       <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        ${repeat(
-          photos,
-          (photo) => photo.id,
-          (photo) => PhotoCard(photo),
-        )}
+        ${repeat(filteredPhotos.value, (photo) => photo.id, PhotoImage)}
       </section>
     </main>
   `;
 }
 
-mount(App(), app);
+const root = mount(App(), app);
+let mounted = false;
+
+$effect(() => {
+  filter.value;
+  mounted ? root.update(App()) : (mounted = true);
+});

@@ -1,22 +1,86 @@
-import { html, cn, type View, type Props, component } from '../lib';
+import { html, cn, repeat, type View, type Props, component } from '../lib';
 
-export type SelectProps = Props<Partial<HTMLSelectElement>>;
+type SelectOptionValue = string | number;
 
-const RawSelect = component(({ children, className }: SelectProps): View => {
-  return html`<select
-    class="${cn(
+export type SelectOption =
+  | SelectOptionValue
+  | {
+      key?: SelectOptionValue;
+      value: SelectOptionValue;
+      label?: View;
+      disabled?: boolean;
+      selected?: boolean;
+    };
+
+export type SelectProps = Props<Omit<Partial<HTMLSelectElement>, 'options'>> & {
+  items?: readonly SelectOption[];
+};
+
+type NormalizedSelectOption = {
+  value: SelectOptionValue;
+  label: View;
+  disabled?: boolean;
+  selected?: boolean;
+};
+
+function isSelectOptionObject(
+  option: SelectOption,
+): option is Exclude<SelectOption, SelectOptionValue> {
+  return typeof option === 'object' && option !== null;
+}
+
+function optionKey(option: SelectOption, index: number): SelectOptionValue {
+  return isSelectOptionObject(option) && option.key !== undefined ? option.key : index;
+}
+
+function normalizeOption(option: SelectOption): NormalizedSelectOption {
+  if (!isSelectOptionObject(option)) {
+    return {
+      value: option,
+      label: option,
+    };
+  }
+
+  return {
+    value: option.key ?? option.value,
+    label: option.label ?? option.value,
+    disabled: option.disabled,
+    selected: option.selected,
+  };
+}
+
+function renderOption(option: SelectOption): View {
+  const item = normalizeOption(option);
+
+  return html`<option value="${item.value}" disabled="${item.disabled}" selected="${item.selected}">
+    ${item.label}
+  </option>`;
+}
+
+const RawSelect = component<SelectProps>(
+  ({ className, items = [], value }: SelectProps = {}): View => {
+    const selectClass = cn(
       'h-8 w-full min-w-0 appearance-none rounded-(--radius) border border-input py-1 pr-8 pl-2.5 text-sm transition-colors select-none bg-transparent hover:bg-input/50 outline-none disabled:pointer-events-none disabled:cursor-not-allowed',
       'focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
       'aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20',
       'dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40',
       className,
-    )}"
-  >
-    ${children ?? ''}
-  </select>`;
-});
+    );
+    const renderedOptions = repeat(items, optionKey, renderOption);
 
-export const Select = (props: SelectProps): View => {
+    if (value === undefined || value === null) {
+      return html`<select class="${selectClass}">
+        ${renderedOptions}
+      </select>`;
+    }
+
+    return html`<select class="${selectClass}">
+      ${renderedOptions}
+    </select>`;
+  },
+);
+
+export const Select = (props: SelectProps = {}): View => {
   return html`<div class="relative w-fit has-[select:disabled]:opacity-50">
     ${RawSelect(props)}
     <svg
