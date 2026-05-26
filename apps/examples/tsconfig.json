@@ -13,7 +13,10 @@
     "baseUrl": ".",
     "ignoreDeprecations": "6.0",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@holmityd/litcode": ["../../packages/litcode/src/index.ts"],
+      "@holmityd/litcode/core": ["../../packages/litcode/src/lib/core.ts"],
+      "@holmityd/litcode/variants": ["../../packages/litcode/src/lib/variants.ts"]
     },
     "noUnusedLocals": true,
     "noUnusedParameters": true,
