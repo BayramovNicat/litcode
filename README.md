@@ -296,8 +296,8 @@ Before publishing, update `name`, `version`, `repository`, and `homepage` in `pa
 
 ```sh
 npm login
-npm run build
-npm publish --access public
+npm run release
+git push origin main --follow-tags
 ```
 
-`prepublishOnly` runs tests and the library build automatically before `npm publish`.
+The `release` script bumps the patch version and creates the git tag that the GitHub Actions workflow watches. If you need a different bump, use `npm run release:minor` or `npm run release:major` instead. Pushing the tag triggers CI, which runs tests, builds the package, and publishes to npm with `npm publish --access public`.
