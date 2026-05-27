@@ -1,7 +1,7 @@
 import { JSDOM } from 'jsdom';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { $derived, $effect, $state, html, mount, repeat } from '../src/lib';
+import { $derived, $effect, $state, html, mount, repeat, component, type Props } from '../src/lib';
 
 function setupDom(): HTMLElement {
   const dom = new JSDOM('<!doctype html><div id="app"></div>', {
@@ -495,5 +495,113 @@ describe('dom patching', () => {
     button.click();
 
     assert.equal(calls, 0);
+  });
+
+  it('handles component with static and reactive properties', async () => {
+    const app = setupDom();
+    type ButtonProps = Props<{
+      title?: string;
+      disabled?: boolean;
+    }>;
+    const Button = component<ButtonProps>(({ children }) => html`<button>${children ?? ''}</button>`);
+
+    const title = $state('Initial Title');
+    const disabled = $state(false);
+
+    const handle = mount(Button({ title, disabled, children: 'Click' }), app);
+    const button = app.querySelector('button')!;
+
+    assert.equal(button.title, 'Initial Title');
+    assert.equal(button.disabled, false);
+
+    title.value = 'New Title';
+    disabled.value = true;
+    await Promise.resolve();
+
+    assert.equal(button.title, 'New Title');
+    assert.equal(button.disabled, true);
+
+    handle.destroy();
+  });
+
+  it('handles component with reactive dataset and style properties', async () => {
+    const app = setupDom();
+    type BoxProps = Props<{
+      id?: string;
+    }>;
+    const Box = component<BoxProps>(() => html`<div>Box</div>`);
+
+    const color = $state('red');
+    const testId = $state('box-1');
+
+    const handle = mount(Box({ style: () => `color: ${color.value};`, dataset: { testId } }), app);
+    const div = app.querySelector('div')!;
+
+    assert.equal(div.style.color, 'red');
+    assert.equal(div.dataset.testId, 'box-1');
+
+    color.value = 'blue';
+    testId.value = 'box-2';
+    await Promise.resolve();
+
+    assert.equal(div.style.color, 'blue');
+    assert.equal(div.dataset.testId, 'box-2');
+
+    handle.destroy();
+  });
+
+  it('cleans up component reactive properties on destroy', async () => {
+    const app = setupDom();
+    type ButtonProps = Props<{
+      title?: string;
+    }>;
+    const Button = component<ButtonProps>(() => html`<button>Go</button>`);
+
+    const title = $state('Initial');
+    const handle = mount(Button({ title }), app);
+    const button = app.querySelector('button')!;
+
+    assert.equal(button.title, 'Initial');
+
+    handle.destroy();
+
+    title.value = 'Changed';
+    await Promise.resolve();
+
+    // Since it is destroyed and effects are cleaned up, the DOM element title should not change
+    assert.equal(button.title, 'Initial');
+  });
+
+  it('cleans up old reactive property effects when properties are changed or component is updated', async () => {
+    const app = setupDom();
+    type ButtonProps = Props<{
+      title?: string;
+    }>;
+    const Button = component<ButtonProps>(() => html`<button>Go</button>`);
+
+    const first = $state('First');
+    const second = $state('Second');
+
+    const view = (title: any) => Button({ title });
+    const handle = mount(view(first), app);
+    const button = app.querySelector('button')!;
+
+    assert.equal(button.title, 'First');
+
+    handle.update(view(second));
+    assert.equal(button.title, 'Second');
+
+    first.value = 'Updated First';
+    await Promise.resolve();
+
+    // The effect of 'first' should be cleaned up, so it shouldn't overwrite the 'Second' title
+    assert.equal(button.title, 'Second');
+
+    second.value = 'Updated Second';
+    await Promise.resolve();
+
+    assert.equal(button.title, 'Updated Second');
+
+    handle.destroy();
   });
 });

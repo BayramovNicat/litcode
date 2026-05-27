@@ -4,6 +4,7 @@ import {
   updateTemplateInstance,
   instantiateTemplate,
   destroyTemplateInstance,
+  cleanupElementEffects,
 } from './dom-template';
 import { patchChildren } from './patch';
 
@@ -99,7 +100,10 @@ function replaceChildren(parent: Node, node: Node): void {
 }
 
 function clearChildren(parent: Node): void {
-  while (parent.firstChild) parent.removeChild(parent.firstChild);
+  while (parent.firstChild) {
+    cleanupElementEffects(parent.firstChild);
+    parent.removeChild(parent.firstChild);
+  }
 }
 
 function childNodesToArray(parent: Node): Node[] {

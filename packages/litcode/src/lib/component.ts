@@ -6,6 +6,7 @@ import {
   type TemplateResult,
   type View,
 } from './types';
+import { isRune, $effect } from './runes';
 
 const specialPropKeySet = new Set([...specialPropKeys, 'className']);
 const hasOwn = Object.prototype.hasOwnProperty;
@@ -36,7 +37,7 @@ function firstElement(view: View): Element | null {
   return null;
 }
 
-function applyProps(element: Element, props: object): void {
+export function applyProps(element: Element, props: object): void {
   const target = element as HTMLElement & {
     dataset: DOMStringMap;
     style: CSSStyleDeclaration;
@@ -47,16 +48,133 @@ function applyProps(element: Element, props: object): void {
     style?: string;
   };
 
+  // Store the raw props on the element so we can transfer them during patching
+  (target as any).__litcodeProps = props;
+
+  const propCleanups = (target as any).__litcodePropCleanups ??= {};
+
   for (const key in props) {
     if (!hasOwn.call(props, key)) continue;
     if (specialPropKeySet.has(key)) continue;
     if (!(key in target)) continue;
 
-    target[key] = (props as Record<string, unknown>)[key];
+    const rawValue = (props as Record<string, unknown>)[key];
+
+    // Clean up any existing effect for this property
+    if (propCleanups[key]) {
+      propCleanups[key]();
+      delete propCleanups[key];
+    }
+
+    let isRuneVal = false;
+    let isReactiveFn = false;
+
+    if (rawValue !== null && rawValue !== undefined) {
+      if (typeof rawValue === 'object') {
+        if ((rawValue as any).__litcodeRune === true) isRuneVal = true;
+      } else if (typeof rawValue === 'function') {
+        // If it starts with 'on' or is a native function property on the element,
+        // it's a callback, not a reactive getter.
+        if (key.startsWith('on') || typeof target[key] === 'function') {
+          isReactiveFn = false;
+        } else {
+          isReactiveFn = true;
+        }
+      }
+    }
+
+    if (isRuneVal || isReactiveFn) {
+      propCleanups[key] = $effect(() => {
+        const resolvedValue = isRuneVal ? (rawValue as any).value : (rawValue as Function)();
+        target[key] = resolvedValue;
+      });
+    } else {
+      target[key] = rawValue;
+    }
   }
 
-  if (dataset) Object.assign(target.dataset, dataset);
-  if (style) target.style.cssText = style;
+  // Handle dataset
+  if (dataset) {
+    const datasetCleanups = (target as any).__litcodeDatasetCleanups ??= {};
+
+    // Clean up any keys that are no longer present
+    for (const key in datasetCleanups) {
+      if (!(key in dataset)) {
+        datasetCleanups[key]();
+        delete datasetCleanups[key];
+        delete target.dataset[key];
+      }
+    }
+
+    for (const key in dataset) {
+      if (!hasOwn.call(dataset, key)) continue;
+
+      const rawValue = dataset[key];
+
+      if (datasetCleanups[key]) {
+        datasetCleanups[key]();
+        delete datasetCleanups[key];
+      }
+
+      let isRuneVal = false;
+      let isReactiveFn = false;
+
+      if (rawValue !== null && rawValue !== undefined) {
+        if (typeof rawValue === 'object') {
+          if ((rawValue as any).__litcodeRune === true) isRuneVal = true;
+        } else if (typeof rawValue === 'function') {
+          isReactiveFn = true;
+        }
+      }
+
+      if (isRuneVal || isReactiveFn) {
+        datasetCleanups[key] = $effect(() => {
+          const resolvedValue = isRuneVal ? (rawValue as any).value : (rawValue as Function)();
+          if (resolvedValue === null || resolvedValue === undefined) {
+            delete target.dataset[key];
+          } else {
+            target.dataset[key] = String(resolvedValue);
+          }
+        });
+      } else {
+        if (rawValue === null || rawValue === undefined) {
+          delete target.dataset[key];
+        } else {
+          target.dataset[key] = String(rawValue);
+        }
+      }
+    }
+  }
+
+  // Handle style
+  if (style !== undefined) {
+    const styleCleanups = (target as any).__litcodeStyleCleanups ??= {};
+
+    if (styleCleanups.style) {
+      styleCleanups.style();
+      delete styleCleanups.style;
+    }
+
+    let isRuneVal = false;
+    let isReactiveFn = false;
+
+    if (style !== null && style !== undefined) {
+      if (typeof style === 'object') {
+        if ((style as any).__litcodeRune === true) isRuneVal = true;
+      } else if (typeof style === 'function') {
+        isReactiveFn = true;
+      }
+    }
+
+    if (isRuneVal || isReactiveFn) {
+      styleCleanups.style = $effect(() => {
+        const resolvedValue = isRuneVal ? (style as any).value : (style as Function)();
+        target.style.cssText = resolvedValue ? String(resolvedValue) : '';
+      });
+    } else {
+      target.style.cssText = style ? String(style) : '';
+    }
+  }
 }
 
 function hasRootProps(props: object): boolean {

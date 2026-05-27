@@ -1,3 +1,5 @@
+import { type Rune } from './runes';
+
 /**
  * Internal template object returned by `html`.
  */
@@ -58,12 +60,21 @@ export const specialPropKeys = ['children', 'dataset', 'style'] as const;
 type SpecialPropKey = (typeof specialPropKeys)[number];
 
 /**
+ * Helper to wrap any non-function type to accept its original type, a Rune, or a reactive getter.
+ */
+export type BindableProp<T> = T extends Function ? T : T | Rune<T> | (() => T);
+
+/**
  * Component props helper with built-in `children`, `dataset`, and `style`.
  */
-export type Props<P extends object = {}> = Omit<P, SpecialPropKey> & {
+export type Props<P extends object = {}> = {
+  [K in keyof Omit<P, SpecialPropKey>]: BindableProp<P[K]>;
+} & {
   children?: View | View[];
-  dataset?: Partial<DOMStringMap>;
-  style?: string;
+  dataset?: Partial<{
+    [K in keyof DOMStringMap]: BindableProp<DOMStringMap[K]>;
+  }>;
+  style?: BindableProp<string>;
 };
 
 /**
@@ -78,3 +89,4 @@ export type MountHandle = {
   update(view: View): void;
   destroy(): void;
 };
+

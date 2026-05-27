@@ -12,6 +12,7 @@ import {
   updateTemplateInstance,
   destroyTemplateInstance,
   instantiateTemplate,
+  cleanupElementEffects,
 } from './dom-template';
 import { updateRepeatChildPart } from './repeat';
 
@@ -213,8 +214,10 @@ export function isPrimitiveChild(
 }
 
 function removeNodes(nodes: Node[], start = 0): void {
-  for (let index = start; index < nodes.length; index++)
+  for (let index = start; index < nodes.length; index++) {
+    cleanupElementEffects(nodes[index]);
     nodes[index].parentNode?.removeChild(nodes[index]);
+  }
 }
 
 function resetPrimitiveChildPart(part: ChildPart, node?: Node): void {

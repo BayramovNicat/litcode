@@ -1,4 +1,5 @@
 import { type LitcodeElement } from './template';
+import { applyProps } from './component';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -418,6 +419,37 @@ function hasKeyedChildNodes(parent: Node): boolean {
 
 export function patchElement(current: Element, next: Element): void {
   (current as LitcodeElement).__litcodeKey = (next as LitcodeElement).__litcodeKey;
+
+  // Clean up any effects created on the next (temporary) element before discarding/patching it
+  const nextPropCleanups = (next as any).__litcodePropCleanups;
+  if (nextPropCleanups) {
+    for (const key in nextPropCleanups) {
+      nextPropCleanups[key]();
+    }
+    delete (next as any).__litcodePropCleanups;
+  }
+
+  const nextStyleCleanups = (next as any).__litcodeStyleCleanups;
+  if (nextStyleCleanups) {
+    for (const key in nextStyleCleanups) {
+      nextStyleCleanups[key]();
+    }
+    delete (next as any).__litcodeStyleCleanups;
+  }
+
+  const nextDatasetCleanups = (next as any).__litcodeDatasetCleanups;
+  if (nextDatasetCleanups) {
+    for (const key in nextDatasetCleanups) {
+      nextDatasetCleanups[key]();
+    }
+    delete (next as any).__litcodeDatasetCleanups;
+  }
+
+  // Transfer and apply props to the current DOM element
+  if ((next as any).__litcodeProps) {
+    applyProps(current, (next as any).__litcodeProps);
+  }
+
   patchAttributes(current, next);
   patchEvents(current, next);
   if (!patchElementTextChildren(current, next)) patchChildren(current, childNodesToArray(next));

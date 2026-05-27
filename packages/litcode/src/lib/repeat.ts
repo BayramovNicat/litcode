@@ -5,7 +5,11 @@ import {
   instantiateRepeatBlock,
   isTemplateResult,
 } from './dom-internal';
-import { updateTemplateInstance, destroyTemplateInstance } from './dom-template';
+import {
+  updateTemplateInstance,
+  destroyTemplateInstance,
+  cleanupElementEffects,
+} from './dom-template';
 
 export function updateRepeatChildPart(part: ChildPart, value: any): void {
   const parent = part.marker.parentNode;
@@ -95,6 +99,7 @@ export function updateRepeatChildPart(part: ChildPart, value: any): void {
     }
     const nodes = block.nodes;
     for (let index = 0; index < nodes.length; index++) {
+      cleanupElementEffects(nodes[index]);
       nodes[index].parentNode?.removeChild(nodes[index]);
     }
   };

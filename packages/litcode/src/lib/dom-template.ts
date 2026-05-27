@@ -267,7 +267,45 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
   instance.result = next;
 }
 
+export function cleanupElementEffects(node: Node): void {
+  if (node instanceof Element) {
+    const propCleanups = (node as any).__litcodePropCleanups;
+    if (propCleanups) {
+      for (const key in propCleanups) {
+        propCleanups[key]();
+      }
+      delete (node as any).__litcodePropCleanups;
+    }
+
+    const styleCleanups = (node as any).__litcodeStyleCleanups;
+    if (styleCleanups) {
+      for (const key in styleCleanups) {
+        styleCleanups[key]();
+      }
+      delete (node as any).__litcodeStyleCleanups;
+    }
+
+    const datasetCleanups = (node as any).__litcodeDatasetCleanups;
+    if (datasetCleanups) {
+      for (const key in datasetCleanups) {
+        datasetCleanups[key]();
+      }
+      delete (node as any).__litcodeDatasetCleanups;
+    }
+
+    let child = node.firstElementChild;
+    while (child) {
+      cleanupElementEffects(child);
+      child = child.nextElementSibling;
+    }
+  }
+}
+
 export function destroyTemplateInstance(instance: TemplateInstance): void {
+  for (let index = 0; index < instance.nodes.length; index++) {
+    cleanupElementEffects(instance.nodes[index]);
+  }
+
   for (let index = 0; index < instance.parts.length; index++) {
     const part = instance.parts[index];
     part.cleanup?.();

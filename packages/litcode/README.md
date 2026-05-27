@@ -39,6 +39,27 @@ Runtime note: without a compiler, browser-style string handlers like
 values instead: `onclick=${() => count.value++}`. Dynamic attribute/event
 interpolations can be quoted or unquoted.
 
+## Reactive Attributes & Props
+
+Litcode supports passing reactive values (Runes or getter functions) directly to both HTML attributes and component properties:
+
+```ts
+type ButtonProps = Props<Partial<HTMLButtonElement>>;
+
+const Button = component<ButtonProps>(({ children, ...props }: ButtonProps = {}) => {
+  return html`<button>${children ?? ''}</button>`;
+});
+
+const tooltip = $state('Click me!');
+
+// Both variants work with expecting typings:
+// 1. Passing a Rune to a custom component property
+const view1 = Button({ title: tooltip, children: 'Component Button' });
+
+// 2. Interpolating a Rune directly into a native element attribute
+const view2 = html`<button title=${tooltip}>Native Button</button>`;
+```
+
 ## Agent Rules
 
 Install Litcode coding-agent instructions into another project:
