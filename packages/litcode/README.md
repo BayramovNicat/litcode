@@ -77,3 +77,20 @@ bunx @holmityd/litcode init --tools copilot,antigravity --cwd ../my-app
 ```
 
 Existing files are skipped unless `--force` is passed.
+
+## Components
+
+Litcode components are exported as direct subpaths so bundlers can keep imports
+small:
+
+```ts
+import { Select } from '@holmityd/litcode/components/select';
+```
+
+If your app uses Tailwind CSS v4, import the component source hint once in your
+app CSS so Tailwind includes the component utilities from the published package:
+
+```css
+@import 'tailwindcss';
+@import '@holmityd/litcode/components.css';
+```

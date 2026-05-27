@@ -30,6 +30,7 @@
   },
   "files": [
     "dist",
+    "components.css",
     "templates",
     "README.md"
   ],
@@ -52,7 +53,8 @@
     "./components/*": {
       "types": "./dist/components/*.d.ts",
       "import": "./dist/components/*.js"
-    }
+    },
+    "./components.css": "./components.css"
   },
   "scripts": {
     "dev": "vite",
