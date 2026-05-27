@@ -66,22 +66,8 @@ export function applyProps(element: Element, props: object): void {
       delete propCleanups[key];
     }
 
-    let isRuneVal = false;
-    let isReactiveFn = false;
-
-    if (rawValue !== null && rawValue !== undefined) {
-      if (typeof rawValue === 'object') {
-        if ((rawValue as any).__litcodeRune === true) isRuneVal = true;
-      } else if (typeof rawValue === 'function') {
-        // If it starts with 'on' or is a native function property on the element,
-        // it's a callback, not a reactive getter.
-        if (key.startsWith('on') || typeof target[key] === 'function') {
-          isReactiveFn = false;
-        } else {
-          isReactiveFn = true;
-        }
-      }
-    }
+    const isRuneVal = isRune(rawValue);
+    const isReactiveFn = !isRuneVal && typeof rawValue === 'function' && !(key.startsWith('on') || typeof target[key] === 'function');
 
     if (isRuneVal || isReactiveFn) {
       propCleanups[key] = $effect(() => {
@@ -116,16 +102,8 @@ export function applyProps(element: Element, props: object): void {
         delete datasetCleanups[key];
       }
 
-      let isRuneVal = false;
-      let isReactiveFn = false;
-
-      if (rawValue !== null && rawValue !== undefined) {
-        if (typeof rawValue === 'object') {
-          if ((rawValue as any).__litcodeRune === true) isRuneVal = true;
-        } else if (typeof rawValue === 'function') {
-          isReactiveFn = true;
-        }
-      }
+      const isRuneVal = isRune(rawValue);
+      const isReactiveFn = !isRuneVal && typeof rawValue === 'function';
 
       if (isRuneVal || isReactiveFn) {
         datasetCleanups[key] = $effect(() => {
@@ -155,16 +133,8 @@ export function applyProps(element: Element, props: object): void {
       delete styleCleanups.style;
     }
 
-    let isRuneVal = false;
-    let isReactiveFn = false;
-
-    if (style !== null && style !== undefined) {
-      if (typeof style === 'object') {
-        if ((style as any).__litcodeRune === true) isRuneVal = true;
-      } else if (typeof style === 'function') {
-        isReactiveFn = true;
-      }
-    }
+    const isRuneVal = isRune(style);
+    const isReactiveFn = !isRuneVal && typeof style === 'function';
 
     if (isRuneVal || isReactiveFn) {
       styleCleanups.style = $effect(() => {

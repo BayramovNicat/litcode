@@ -18,7 +18,7 @@ import {
 import * as domHelpers from './dom-helpers';
 import * as domTemplateUtils from './dom-template-utils';
 import { updateChildPart, updatePrimitiveChildPart } from './dom-child';
-import { $effect } from './runes';
+import { $effect, isRune } from './runes';
 
 let templateCacheDocument: Document | undefined;
 
@@ -133,16 +133,8 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
         continue;
       }
 
-      let isRuneVal = false;
-      let isReactiveFn = false;
-
-      if (rawValue !== null && rawValue !== undefined) {
-        if (typeof rawValue === 'object') {
-          if ((rawValue as any).__litcodeRune === true) isRuneVal = true;
-        } else if (typeof rawValue === 'function') {
-          isReactiveFn = true;
-        }
-      }
+      const isRuneVal = isRune(rawValue);
+      const isReactiveFn = !isRuneVal && typeof rawValue === 'function';
 
       if (isRuneVal || isReactiveFn) {
         if (part.source !== rawValue || (resultChanged && isRuneVal)) {
@@ -185,16 +177,8 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
         continue;
       }
 
-      let isRuneVal = false;
-      let isReactiveFn = false;
-
-      if (rawValue !== null && rawValue !== undefined) {
-        if (typeof rawValue === 'object') {
-          if ((rawValue as any).__litcodeRune === true) isRuneVal = true;
-        } else if (typeof rawValue === 'function') {
-          isReactiveFn = true;
-        }
-      }
+      const isRuneVal = isRune(rawValue);
+      const isReactiveFn = !isRuneVal && typeof rawValue === 'function';
 
       if (isRuneVal || isReactiveFn) {
         if (part.source !== rawValue || (resultChanged && isRuneVal)) {
