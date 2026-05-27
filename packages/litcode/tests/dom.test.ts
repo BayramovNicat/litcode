@@ -1,7 +1,8 @@
 import { JSDOM } from 'jsdom';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { $derived, $effect, $state, html, mount, repeat, component, type Props } from '../src/lib';
+import { $derived, $effect, $state, html, mount, repeat, component, type Props, type View } from '../src/lib';
+import type { TemplateValue } from '../src/lib/template';
 
 function setupDom(): HTMLElement {
   const dom = new JSDOM('<!doctype html><div id="app"></div>', {
@@ -306,7 +307,7 @@ describe('dom patching', () => {
 
   it('switches repeated child parts to non-repeat views', () => {
     const app = setupDom();
-    const view = (content: unknown) => html`<section>${content}</section>`;
+    const view = (content: View) => html`<section>${content}</section>`;
     const list = (items: string[]) =>
       repeat(
         items,
@@ -386,7 +387,7 @@ describe('dom patching', () => {
     const app = setupDom();
     const first = $state('first');
     const second = $state('second');
-    const view = (value: unknown) => html`<p>${value}</p>`;
+    const view = (value: TemplateValue) => html`<p>${value}</p>`;
     const handle = mount(view(first), app);
 
     handle.update(view(second));
@@ -457,7 +458,7 @@ describe('dom patching', () => {
     const app = setupDom();
     const first = (label: string) => html`<span>${label}</span>`;
     const second = (label: string) => html`<strong>${label}</strong>`;
-    const view = (child: unknown) => html`<p>${child}</p>`;
+    const view = (child: View) => html`<p>${child}</p>`;
     const handle = mount(view(first('First')), app);
 
     handle.update(view(second('Second')));
@@ -473,7 +474,7 @@ describe('dom patching', () => {
     const app = setupDom();
     const first = (label: string) => html`<span>${label}</span>`;
     const second = (label: string) => html`<strong>${label}</strong>`;
-    const view = (items: unknown[]) => html`<p>${items}</p>`;
+    const view = (items: View[]) => html`<p>${items}</p>`;
     const handle = mount(view([first('First')]), app);
 
     handle.update(view([second('Second')]));

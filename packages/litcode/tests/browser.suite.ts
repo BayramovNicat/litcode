@@ -21,9 +21,9 @@ declare global {
 }
 
 const tests: BrowserTest[] = [];
-const app = document.querySelector<HTMLElement>('#app');
-
-if (!app) throw new Error('Browser test root not found');
+const appElement = document.querySelector<HTMLElement>('#app');
+if (!appElement) throw new Error('Browser test root not found');
+const app = appElement;
 
 function test(name: string, run: BrowserTest['run']): void {
   tests.push({ name, run });
