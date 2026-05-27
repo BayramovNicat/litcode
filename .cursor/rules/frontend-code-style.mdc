@@ -44,8 +44,8 @@ This project is a tiny TypeScript-first DOM rendering library. Write frontend co
 ## Reactivity And DOM Behavior
 
 - Use `$state` for mutable local state, `$derived` for computed state, and `$effect` for side effects.
-- Prefer passing runes or reactive getter functions into `html` templates over manually syncing DOM text, attributes, or classes.
-- Do not introduce ad-hoc stores, observers, or module-level mutable UI state when the provided runes express the state clearly.
+- Prefer passing signals or reactive getter functions into `html` templates over manually syncing DOM text, attributes, or classes.
+- Do not introduce ad-hoc stores, observers, or module-level mutable UI state when the provided signals express the state clearly.
 - Return cleanup functions from `$effect` when adding listeners, timers, observers, or external resources.
 - Do not mutate DOM behind the renderer unless the behavior needs an imperative browser API, such as `HTMLDialogElement.showModal()` or lazy image loading.
 - Preserve focus, selection, and existing DOM nodes when changing renderer or component behavior.
