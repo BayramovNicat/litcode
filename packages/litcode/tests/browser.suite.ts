@@ -190,7 +190,7 @@ test('syncs select value after option children change', () => {
   equal(select.value, 'c', 'select value should follow the patched option set');
 });
 
-test('updates rune child and attribute parts without root updates', async () => {
+test('updates signal child and attribute parts without root updates', async () => {
   const target = resetTarget();
   const label = $state('Save');
   const value = $state('a');
@@ -199,16 +199,16 @@ test('updates rune child and attribute parts without root updates', async () => 
   const input = target.querySelector('input');
 
   assert(input, 'input should be rendered');
-  equal(target.textContent, 'Save', 'initial child rune should render');
-  equal(input.value, 'a', 'initial attribute rune should render');
+  equal(target.textContent, 'Save', 'initial child signal should render');
+  equal(input.value, 'a', 'initial attribute signal should render');
 
   label.value = 'Saved';
   value.value = 'ab';
   await nextMicrotask();
 
-  equal(target.textContent, 'Saved', 'child rune should update');
+  equal(target.textContent, 'Saved', 'child signal should update');
   equal(target.querySelector('input'), input, 'input node should be preserved');
-  equal(input.value, 'ab', 'attribute rune should update');
+  equal(input.value, 'ab', 'attribute signal should update');
 });
 
 test('removes stale derived dependencies in the browser microtask queue', async () => {

@@ -45,27 +45,27 @@ function cleanupObserver(observer: Subscriber): void {
 /**
  * A small reactive value with subscription support.
  */
-export type Rune<T> = {
-  __litcodeRune: true;
+export type Signal<T> = {
+  __litcodeSignal: true;
   value: T;
   subscribe(subscriber: Subscriber): () => void;
 };
 
 /**
- * Returns `true` when a value is a Litcode rune.
+ * Returns `true` when a value is a Litcode signal.
  */
-export function isRune(value: unknown): value is Rune<unknown> {
-  return typeof value === 'object' && value !== null && (value as any).__litcodeRune === true;
+export function isSignal(value: unknown): value is Signal<unknown> {
+  return typeof value === 'object' && value !== null && (value as any).__litcodeSignal === true;
 }
 
 /**
  * Creates a mutable reactive state value.
  */
-export function $state<T>(initial: T): Rune<T> {
+export function $state<T>(initial: T): Signal<T> {
   const target = { value: initial };
 
   return {
-    __litcodeRune: true,
+    __litcodeSignal: true,
     get value() {
       track(target);
       return target.value;
@@ -85,9 +85,9 @@ export function $state<T>(initial: T): Rune<T> {
 }
 
 /**
- * Creates a readonly rune derived from other reactive values.
+ * Creates a readonly signal derived from other reactive values.
  */
-export function $derived<T>(compute: () => T): Rune<T> {
+export function $derived<T>(compute: () => T): Signal<T> {
   const state = $state<T>(undefined as T);
 
   const recompute = () => {
@@ -108,7 +108,7 @@ export function $derived<T>(compute: () => T): Rune<T> {
 
   recompute();
   return {
-    __litcodeRune: true,
+    __litcodeSignal: true,
     get value() {
       return state.value;
     },

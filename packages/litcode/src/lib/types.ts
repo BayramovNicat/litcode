@@ -1,4 +1,4 @@
-import { type Rune } from './runes';
+import { type Signal } from './signals';
 
 /**
  * Internal template object returned by `html`.
@@ -63,13 +63,13 @@ type SpecialPropKey = (typeof specialPropKeys)[number];
  * Component props helper with built-in `children`, `dataset`, and `style`.
  */
 export type Props<P extends object = {}> = {
-  [K in keyof Omit<P, SpecialPropKey>]: P[K] | Rune<P[K]>;
+  [K in keyof Omit<P, SpecialPropKey>]: P[K] | Signal<P[K]>;
 } & {
   children?: View | View[];
   dataset?: Partial<{
-    [K in keyof DOMStringMap]: DOMStringMap[K] | Rune<DOMStringMap[K]>;
+    [K in keyof DOMStringMap]: DOMStringMap[K] | Signal<DOMStringMap[K]>;
   }>;
-  style?: string | Rune<string> | (() => string);
+  style?: string | Signal<string> | (() => string);
 };
 
 /**

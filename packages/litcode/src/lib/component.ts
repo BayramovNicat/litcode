@@ -6,7 +6,7 @@ import {
   type TemplateResult,
   type View,
 } from './types';
-import { isRune, $effect } from './runes';
+import { isSignal, $effect } from './signals';
 
 const specialPropKeySet = new Set([...specialPropKeys, 'className']);
 const hasOwn = Object.prototype.hasOwnProperty;
@@ -66,12 +66,12 @@ export function applyProps(element: Element, props: object): void {
       delete propCleanups[key];
     }
 
-    const isRuneVal = isRune(rawValue);
-    const isReactiveFn = !isRuneVal && typeof rawValue === 'function' && !(key.startsWith('on') || typeof target[key] === 'function');
+    const isSignalVal = isSignal(rawValue);
+    const isReactiveFn = !isSignalVal && typeof rawValue === 'function' && !(key.startsWith('on') || typeof target[key] === 'function');
 
-    if (isRuneVal || isReactiveFn) {
+    if (isSignalVal || isReactiveFn) {
       propCleanups[key] = $effect(() => {
-        const resolvedValue = isRuneVal ? (rawValue as any).value : (rawValue as Function)();
+        const resolvedValue = isSignalVal ? (rawValue as any).value : (rawValue as Function)();
         target[key] = resolvedValue;
       });
     } else {
@@ -102,12 +102,12 @@ export function applyProps(element: Element, props: object): void {
         delete datasetCleanups[key];
       }
 
-      const isRuneVal = isRune(rawValue);
-      const isReactiveFn = !isRuneVal && typeof rawValue === 'function';
+      const isSignalVal = isSignal(rawValue);
+      const isReactiveFn = !isSignalVal && typeof rawValue === 'function';
 
-      if (isRuneVal || isReactiveFn) {
+      if (isSignalVal || isReactiveFn) {
         datasetCleanups[key] = $effect(() => {
-          const resolvedValue = isRuneVal ? (rawValue as any).value : (rawValue as Function)();
+          const resolvedValue = isSignalVal ? (rawValue as any).value : (rawValue as Function)();
           if (resolvedValue === null || resolvedValue === undefined) {
             delete target.dataset[key];
           } else {
@@ -133,12 +133,12 @@ export function applyProps(element: Element, props: object): void {
       delete styleCleanups.style;
     }
 
-    const isRuneVal = isRune(style);
-    const isReactiveFn = !isRuneVal && typeof style === 'function';
+    const isSignalVal = isSignal(style);
+    const isReactiveFn = !isSignalVal && typeof style === 'function';
 
-    if (isRuneVal || isReactiveFn) {
+    if (isSignalVal || isReactiveFn) {
       styleCleanups.style = $effect(() => {
-        const resolvedValue = isRuneVal ? (style as any).value : (style as Function)();
+        const resolvedValue = isSignalVal ? (style as any).value : (style as Function)();
         target.style.cssText = resolvedValue ? String(resolvedValue) : '';
       });
     } else {

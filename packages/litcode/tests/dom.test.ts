@@ -329,7 +329,7 @@ describe('dom patching', () => {
     );
   });
 
-  it('updates rune child parts without calling handle.update', async () => {
+  it('updates signal child parts without calling handle.update', async () => {
     const app = setupDom();
     const count = $state(0);
 

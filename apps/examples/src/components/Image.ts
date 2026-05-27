@@ -1,4 +1,14 @@
-import { cn, type Props, type View } from '@holmityd/litcode';
+import { cn, isSignal, type Props, type View, type Signal } from '@holmityd/litcode';
+
+function resolve<T>(value: T | Signal<T> | (() => T)): T {
+  if (isSignal(value)) {
+    return (value as any).value;
+  }
+  if (typeof value === 'function') {
+    return (value as Function)();
+  }
+  return value as T;
+}
 
 const MAX_CONCURRENT = 8;
 const ROOT_MARGIN = '200px 0px';
@@ -110,9 +120,9 @@ function applyImageProps(image: LazyImageElement, props: ImageProps): void {
   const key = image.__litcodeKey!;
   const cachedStatus = sourceStatuses.get(key);
 
-  image.alt = props.alt ?? '';
-  image.loading = props.loading ?? 'lazy';
-  image.decoding = props.decoding ?? 'async';
+  image.alt = resolve(props.alt) ?? '';
+  image.loading = resolve(props.loading) ?? 'lazy';
+  image.decoding = resolve(props.decoding) ?? 'async';
 
   image.className = cn(
     'opacity-0 transition-opacity duration-300 ease-out',
@@ -120,20 +130,22 @@ function applyImageProps(image: LazyImageElement, props: ImageProps): void {
     props.className,
   );
 
-  if (props.style) image.style.cssText = props.style;
+  const styleVal = resolve(props.style);
+  if (styleVal) image.style.cssText = styleVal;
   if (cachedStatus === 'failed') image.style.display = 'none';
 
   applyNativeImageProps(image, props);
 
   if (props.dataset) Object.assign(image.dataset, props.dataset);
   image.dataset.litcodeImage = 'true';
-  image.dataset.src = props.src;
+  image.dataset.src = resolve(props.src);
 
-  const srcset = props.srcset ?? props.srcSet;
+  const srcset = resolve(props.srcset ?? props.srcSet);
   if (srcset) image.dataset.srcset = srcset;
   else delete image.dataset.srcset;
 
-  if (props.sizes) image.dataset.sizes = props.sizes;
+  const sizes = resolve(props.sizes);
+  if (sizes) image.dataset.sizes = sizes;
   else delete image.dataset.sizes;
 
   image.removeAttribute('src');
@@ -150,7 +162,7 @@ function applyNativeImageProps(image: LazyImageElement, props: ImageProps): void
     const value = source[key];
     if (value === undefined || value === null) continue;
 
-    target[key] = value;
+    target[key] = resolve(value as any);
   }
 }
 

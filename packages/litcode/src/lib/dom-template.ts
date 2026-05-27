@@ -18,7 +18,7 @@ import {
 import * as domHelpers from './dom-helpers';
 import * as domTemplateUtils from './dom-template-utils';
 import { updateChildPart, updatePrimitiveChildPart } from './dom-child';
-import { $effect, isRune } from './runes';
+import { $effect, isSignal } from './signals';
 
 let templateCacheDocument: Document | undefined;
 
@@ -133,16 +133,16 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
         continue;
       }
 
-      const isRuneVal = isRune(rawValue);
-      const isReactiveFn = !isRuneVal && typeof rawValue === 'function';
+      const isSignalVal = isSignal(rawValue);
+      const isReactiveFn = !isSignalVal && typeof rawValue === 'function';
 
-      if (isRuneVal || isReactiveFn) {
-        if (part.source !== rawValue || (resultChanged && isRuneVal)) {
+      if (isSignalVal || isReactiveFn) {
+        if (part.source !== rawValue || (resultChanged && isSignalVal)) {
           part.cleanup?.();
           part.cleanup = undefined;
           part.source = rawValue;
           part.cleanup = $effect(() => {
-            const resolvedValue = isRuneVal ? (rawValue as any).value : (rawValue as Function)();
+            const resolvedValue = isSignalVal ? (rawValue as any).value : (rawValue as Function)();
             updateChildPart(part as ChildPart, resolvedValue);
           });
         }
@@ -177,16 +177,16 @@ export function updateTemplateInstance(instance: TemplateInstance, next: Templat
         continue;
       }
 
-      const isRuneVal = isRune(rawValue);
-      const isReactiveFn = !isRuneVal && typeof rawValue === 'function';
+      const isSignalVal = isSignal(rawValue);
+      const isReactiveFn = !isSignalVal && typeof rawValue === 'function';
 
-      if (isRuneVal || isReactiveFn) {
-        if (part.source !== rawValue || (resultChanged && isRuneVal)) {
+      if (isSignalVal || isReactiveFn) {
+        if (part.source !== rawValue || (resultChanged && isSignalVal)) {
           part.cleanup?.();
           part.cleanup = undefined;
           part.source = rawValue;
           part.cleanup = $effect(() => {
-            const resolvedValue = isRuneVal ? (rawValue as any).value : (rawValue as Function)();
+            const resolvedValue = isSignalVal ? (rawValue as any).value : (rawValue as Function)();
             if (shouldUpdateAttributePart(part as AttributePart, resolvedValue)) {
               setAttributeValue(part.element, (part as AttributePart).name, resolvedValue);
               (part as AttributePart).value = resolvedValue;

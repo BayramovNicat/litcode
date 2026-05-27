@@ -1,5 +1,5 @@
 import type { View, RepeatResult, TemplateResult } from './types';
-import type { Rune } from './runes';
+import type { Signal } from './signals';
 
 export type TemplateCacheEntry = {
   template: HTMLTemplateElement;
@@ -85,7 +85,7 @@ export type InstantiatedNodes = Node[] & {
   __litcodeInstance?: TemplateInstance;
 };
 
-export type ReactiveValue<T = unknown> = Rune<T> | (() => T);
+export type ReactiveValue<T = unknown> = Signal<T> | (() => T);
 export type TemplateValue = View | EventListener | ReactiveValue<View>;
 
 export type LitcodeElement = Element & {
