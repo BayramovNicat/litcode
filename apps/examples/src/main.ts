@@ -1,7 +1,7 @@
 import { $derived, $effect, $state, html, mount, repeat, type View } from '@holmityd/litcode';
-import { Dialog } from './components/Dialog';
-import { Image } from './components/Image';
-import { Select } from './components/Select';
+import { Dialog } from '@holmityd/litcode/components/dialog';
+import { Image } from '@holmityd/litcode/components/image';
+import { Select } from '@holmityd/litcode/components/select';
 
 import './style.css';
 

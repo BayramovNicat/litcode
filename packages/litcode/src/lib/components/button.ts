@@ -1,4 +1,5 @@
-import { html, component, type View, type Props, cn, tv, type VariantProps } from '@holmityd/litcode';
+import { component, html, type Props, type View } from '../core';
+import { cn, tv, type VariantProps } from '../variants';
 
 export type RawButtonProps = Props<Partial<HTMLButtonElement>>;
 

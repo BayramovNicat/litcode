@@ -7,6 +7,12 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: /^@holmityd\/litcode\/components\/(.+)$/,
+        replacement: fileURLToPath(
+          new URL('../../packages/litcode/src/lib/components/$1.ts', import.meta.url),
+        ),
+      },
+      {
         find: '@holmityd/litcode/core',
         replacement: fileURLToPath(new URL('../../packages/litcode/src/lib/core.ts', import.meta.url)),
       },

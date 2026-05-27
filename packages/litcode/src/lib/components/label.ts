@@ -1,4 +1,5 @@
-import { html, cn, component, type View, type Props } from '@holmityd/litcode';
+import { component, html, type Props, type View } from '../core';
+import { cn } from '../variants';
 
 export type LabelProps = Props<Partial<HTMLLabelElement>>;
 

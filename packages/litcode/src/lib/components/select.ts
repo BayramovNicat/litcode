@@ -1,4 +1,5 @@
-import { html, cn, repeat, type View, type Props, component } from '@holmityd/litcode';
+import { component, html, repeat, type Props, type View } from '../core';
+import { cn } from '../variants';
 
 type SelectOptionValue = string | number;
 

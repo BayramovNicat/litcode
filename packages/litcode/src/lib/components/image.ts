@@ -1,11 +1,12 @@
-import { cn, isSignal, type Props, type View, type Signal } from '@holmityd/litcode';
+import { isSignal, type Props, type Signal, type View } from '../core';
+import { cn } from '../variants';
 
 function resolve<T>(value: T | Signal<T> | (() => T)): T {
   if (isSignal(value)) {
-    return (value as any).value;
+    return value.value as T;
   }
   if (typeof value === 'function') {
-    return (value as Function)();
+    return (value as () => T)();
   }
   return value as T;
 }
@@ -162,7 +163,7 @@ function applyNativeImageProps(image: LazyImageElement, props: ImageProps): void
     const value = source[key];
     if (value === undefined || value === null) continue;
 
-    target[key] = resolve(value as any);
+    target[key] = resolve(value as HTMLImageElement[keyof HTMLImageElement]);
   }
 }
 

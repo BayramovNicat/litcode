@@ -1,6 +1,6 @@
 {
   "name": "@holmityd/litcode",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Tiny TypeScript-first frontend rendering primitives for template literals, components, keyed repeats, variants, and reactive signals.",
   "author": "Bayramov Nicat",
   "type": "module",
@@ -48,6 +48,10 @@
     "./variants": {
       "types": "./dist/variants.d.ts",
       "import": "./dist/variants.js"
+    },
+    "./components/*": {
+      "types": "./dist/components/*.d.ts",
+      "import": "./dist/components/*.js"
     }
   },
   "scripts": {

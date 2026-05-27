@@ -1,6 +1,20 @@
 import tailwindcss from '@tailwindcss/vite';
+import { readdirSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
+
+const componentDir = fileURLToPath(new URL('./src/lib/components', import.meta.url));
+const componentEntries = Object.fromEntries(
+  readdirSync(componentDir)
+    .filter((file) => file.endsWith('.ts'))
+    .map((file) => {
+      const name = file.slice(0, -3);
+      return [
+        `components/${name}`,
+        fileURLToPath(new URL(`./src/lib/components/${file}`, import.meta.url)),
+      ];
+    }),
+);
 
 const baseConfig = {
   plugins: [tailwindcss()],
@@ -27,6 +41,7 @@ export default defineConfig(({ command, mode }) => {
             index: fileURLToPath(new URL('./src/lib/index.ts', import.meta.url)),
             core: fileURLToPath(new URL('./src/lib/core.ts', import.meta.url)),
             variants: fileURLToPath(new URL('./src/lib/variants.ts', import.meta.url)),
+            ...componentEntries,
           },
           formats: ['es'],
           fileName: (_format, entryName) => `${entryName}.js`,

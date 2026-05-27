@@ -16,7 +16,8 @@
       "@/*": ["src/*"],
       "@holmityd/litcode": ["../../packages/litcode/src/index.ts"],
       "@holmityd/litcode/core": ["../../packages/litcode/src/lib/core.ts"],
-      "@holmityd/litcode/variants": ["../../packages/litcode/src/lib/variants.ts"]
+      "@holmityd/litcode/variants": ["../../packages/litcode/src/lib/variants.ts"],
+      "@holmityd/litcode/components/*": ["../../packages/litcode/src/lib/components/*.ts"]
     },
     "noUnusedLocals": true,
     "noUnusedParameters": true,
