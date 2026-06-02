@@ -143,6 +143,37 @@ describe('dom patching', () => {
     assert.equal(changes, 2);
   });
 
+  it('renders and updates SVG class attributes', () => {
+    const app = setupDom();
+    const icon = (className?: string) => html`
+      <svg
+        class="${className}"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.4"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path vector-effect="non-scaling-stroke" d="m5 12 4 4 10-10" />
+      </svg>
+    `;
+    const handle = mount(icon('size-4 text-emerald-600'), app);
+    const svg = app.querySelector('svg')!;
+
+    assert.equal(svg.getAttribute('class'), 'size-4 text-emerald-600');
+
+    handle.update(icon('size-5 text-sky-600'));
+
+    assert.equal(app.querySelector('svg'), svg);
+    assert.equal(svg.getAttribute('class'), 'size-5 text-sky-600');
+
+    handle.update(icon(undefined));
+
+    assert.equal(svg.getAttribute('class'), '');
+  });
+
   it('reorders keyed children without replacing nodes', () => {
     const app = setupDom();
     const handle = mount(

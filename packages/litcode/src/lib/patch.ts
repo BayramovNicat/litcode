@@ -1,5 +1,6 @@
 import { type LitcodeElement } from './template';
 import { applyProps } from './component';
+import { setClassValue } from './dom-helpers';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -37,7 +38,7 @@ export function patchAttributes(current: Element, next: Element): void {
     const { name } = currentAttributes[index];
     if (!next.hasAttribute(name)) {
       if (name === 'class') {
-        current.className = '';
+        setClassValue(current, '');
       } else {
         current.removeAttribute(name);
       }
@@ -48,7 +49,7 @@ export function patchAttributes(current: Element, next: Element): void {
     const { name, value } = nextAttributes[index];
     if (current.getAttribute(name) !== value) {
       if (name === 'class') {
-        current.className = value;
+        setClassValue(current, value);
       } else {
         current.setAttribute(name, value);
       }

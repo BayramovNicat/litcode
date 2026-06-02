@@ -502,7 +502,7 @@ function setAttributeValue(element: Element, name: string, value: unknown): void
     if (name === 'value' && 'value' in element) {
       (element as HTMLInputElement).value = '';
     } else if (name === 'class') {
-      element.className = '';
+      domHelpers.setClassValue(element, '');
     } else {
       element.removeAttribute(name);
       if (booleanAttributes.has(name) && name in element) {
@@ -531,8 +531,8 @@ function setAttributeValue(element: Element, name: string, value: unknown): void
   const attributeValue = value === true && booleanAttributes.has(name) ? '' : String(value);
 
   if (name === 'class') {
-    if (element.className !== attributeValue) {
-      element.className = attributeValue;
+    if (domHelpers.getClassValue(element) !== attributeValue) {
+      domHelpers.setClassValue(element, attributeValue);
     }
     return;
   }

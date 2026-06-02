@@ -71,6 +71,21 @@ function handlePhotoDialogKeydown(event: KeyboardEvent): void {
   if (event.key === 'ArrowRight') nextImage();
 }
 
+function CheckIcon(className: string): View {
+  return html`<svg
+    class="${className}"
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path vector-effect="non-scaling-stroke" d="m5 12 4 4 10-10" />
+  </svg>`;
+}
+
 function PhotoItem(photo: Photo): View {
   return html`<button
     class="group block overflow-hidden rounded-md text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -157,6 +172,9 @@ function SelectedPhotoDialog(): View {
 }
 
 function App(): View {
+  const iconClassName =
+    filter.value === 'all' ? 'size-5 text-emerald-400' : 'size-5 text-sky-400';
+
   return html`
     <main class="min-h-screen bg-zinc-950 px-4 py-6 text-zinc-50 sm:px-6">
       <div class="mx-auto max-w-6xl">
@@ -168,9 +186,10 @@ function App(): View {
               filter.value = (event.target as HTMLSelectElement).value as FilterValue;
             },
           })}
-          <span class="text-sm text-muted-foreground"
-            >${filteredPhotos.value.length} of ${photos.length}</span
-          >
+          <span class="inline-flex items-center gap-2 text-sm text-muted-foreground">
+            ${CheckIcon(iconClassName)}
+            <span>${filteredPhotos.value.length} of ${photos.length}</span>
+          </span>
         </div>
 
         <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

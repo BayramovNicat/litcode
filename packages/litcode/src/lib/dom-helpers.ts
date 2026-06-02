@@ -24,3 +24,20 @@ export function escapeAttribute(value: unknown): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 }
+
+export function getClassValue(element: Element): string {
+  if (element.namespaceURI === 'http://www.w3.org/2000/svg') {
+    return element.getAttribute('class') ?? '';
+  }
+
+  return (element as HTMLElement).className;
+}
+
+export function setClassValue(element: Element, value: string): void {
+  if (element.namespaceURI === 'http://www.w3.org/2000/svg') {
+    element.setAttribute('class', value);
+    return;
+  }
+
+  (element as HTMLElement).className = value;
+}

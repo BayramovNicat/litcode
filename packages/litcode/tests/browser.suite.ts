@@ -272,6 +272,38 @@ test('supports unquoted dynamic attributes and events in a real browser', () => 
   equal(input.checked, true, 'checked property should update');
 });
 
+test('renders and updates SVG class attributes in a real browser', () => {
+  const target = resetTarget();
+  const icon = (className?: string) => html`
+    <svg
+      class="${className}"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.4"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path vector-effect="non-scaling-stroke" d="m5 12 4 4 10-10" />
+    </svg>
+  `;
+  const handle = mount(icon('size-4 text-emerald-600'), target);
+  const svg = target.querySelector('svg');
+
+  assert(svg, 'svg should be rendered');
+  equal(svg.getAttribute('class'), 'size-4 text-emerald-600', 'svg class should render');
+
+  handle.update(icon('size-5 text-sky-600'));
+
+  equal(target.querySelector('svg'), svg, 'svg node should be preserved');
+  equal(svg.getAttribute('class'), 'size-5 text-sky-600', 'svg class should update');
+
+  handle.update(icon(undefined));
+
+  equal(svg.getAttribute('class'), '', 'missing svg class should clear');
+});
+
 async function runTests(): Promise<void> {
   const results: BrowserTestResult[] = [];
 
